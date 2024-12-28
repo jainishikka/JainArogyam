@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./appwrite/Login";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -16,6 +16,19 @@ const App = () => {
     const [role, setRole] = useState(localStorage.getItem("role")); // Initialize from localStorage
     const [registrationNumber, setRegistrationNumber] = useState(localStorage.getItem("registrationNumber")); // Initialize from localStorage
 
+    useEffect(() => {
+        const updateRole = () => setRole(localStorage.getItem("role"));
+        const updateRegNumber = () => setRegistrationNumber(localStorage.getItem("registrationNumber"));
+
+        window.addEventListener("storage", updateRole);
+        window.addEventListener("storage", updateRegNumber);
+
+        return () => {
+            window.removeEventListener("storage", updateRole);
+            window.removeEventListener("storage", updateRegNumber);
+        };
+    }, []);
+
     const handleLogin = (userRole, regNumber = null) => {
         setRole(userRole);
         localStorage.setItem("role", userRole);
@@ -27,18 +40,17 @@ const App = () => {
     };
 
     return (
-        
         <Routes>
-           
-                    <Route path="/about-us" element={<AboutUs />} />
-                    <Route path="/services" element={<Services />} />
-                    <Route path="/contact-us" element={<ContactUs />} />
-                
+            {/* Public Routes */}
+            <Route path="/about-us" element={<AboutUs />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/contact-us" element={<ContactUs />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/finalData" element={<FinalData />} />
             
+            {/* Login Route */}
             <Route path="/" element={<Login asLogin={handleLogin} />} />
             <Route path="/login" element={<Login asLogin={handleLogin} />} />
-            <Route path="/signup" element={<Signup />} />  {/* Signup component interacting with Appwrite */}
-            <Route path="/finalData" element={<FinalData/>} />
 
             {/* Protected Routes */}
             <Route
@@ -49,7 +61,6 @@ const App = () => {
                     </ProtectedRoute>
                 }
             />
-
             <Route
                 path="/user-dashboard"
                 element={
@@ -58,8 +69,6 @@ const App = () => {
                     </ProtectedRoute>
                 }
             />
-
-            {/* Protected route for Registered Users Data */}
             <Route
                 path="/registered-users-data"
                 element={
@@ -69,10 +78,9 @@ const App = () => {
                 }
             />
 
-            {/* Catch-all redirect for unmatched routes */}
-            <Route path="*" element={<Navigate to="/" />} />
+            {/* Catch-All Redirect */}
+            <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
-        
     );
 };
 
