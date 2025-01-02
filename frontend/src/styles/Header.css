@@ -1,4 +1,4 @@
-/* Logo styling */
+
 .logo {
   height: 50px;  /* Set the height of the logo */
   width: auto;   /* Keep aspect ratio */
@@ -30,7 +30,7 @@ margin: 0 auto;
 }
 
 nav {
-margin-left: auto; /* Push navigation to the right */
+margin-left: auto; 
 }
 
 .nav-links {
@@ -46,20 +46,20 @@ margin: 0 15px;
 
 .nav-link {
 text-decoration: none;
-color: #ecf0f1; /* Light grey text */
+color: #ecf0f1; 
 font-size: 16px;
 font-weight: 500;
 transition: color 0.3s ease, border-bottom 0.3s ease;
 }
 
 .nav-link:hover {
-color: #3498db; /* Blue color on hover */
-border-bottom: 2px solid #3498db; /* Add underline effect */
+color: #3498db; 
+border-bottom: 2px solid #3498db; 
 }
 
 
 @media (max-width: 768px) {
   .logo {
-      height: 40px; /* Reduce logo size on mobile */
+      height: 40px; 
   }
 }

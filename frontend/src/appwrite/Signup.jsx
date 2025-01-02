@@ -25,9 +25,11 @@ const Signup = () => {
   const formatDateForStorage = (dateString) => {
     if (!dateString) return null;
     const date = new Date(dateString);
-    return `${date.getDate().toString().padStart(2, "0")}/${
-      (date.getMonth() + 1).toString().padStart(2, "0")
-    }/${date.getFullYear()}`;
+    const dayStr = date.getDate().toString().padStart(2, "0");
+    const monthStr = (date.getMonth() + 1).toString().padStart(2, "0");
+    const yearStr = date.getFullYear().toString();
+    
+    return `${monthStr}/${dayStr}/${yearStr}`;
   };
 
   const generateRegistrationNumber = () => {
@@ -36,111 +38,7 @@ const Signup = () => {
     return `REG-${timestamp}-${randomString}`;
   };
 
-  // const handleSignup = async (e) => {
-  //   e.preventDefault();
-
-  //   if (loading) return;
-  //   setLoading(true);
-  //   setAlert({ type: "", message: "", registrationNumber: null });
-
-  //   if (!firstName || !lastName || !gender || !dob) {
-  //     setAlert({ type: "error", message: "First name, last name, gender, and date of birth are required." });
-  //     setLoading(false);
-  //     return;
-  //   }
-
-  //   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-  //     setAlert({ type: "error", message: "Please enter a valid email address." });
-  //     setLoading(false);
-  //     return;
-  //   }
-
-  //   if (mobile && (mobile.length !== 10 || isNaN(mobile))) {
-  //     setAlert({ type: "error", message: "Please enter a valid 10-digit mobile number." });
-  //     setLoading(false);
-  //     return;
-  //   }
-
-  //   try {
-  //     const formattedDob = formatDateForStorage(dob);
-  //     const patientName = `${firstName} ${lastName}`.trim();
-
-  //     // Query for existing users by email or mobile
-  //     const queries = [];
-  //     if (email) queries.push(Query.equal("PatientEmail", email));
-  //     if (mobile) queries.push(Query.equal("MobileNumber", mobile));
-
-  //     const existingUsersResponse = await databases.listDocuments(
-  //       envt_imports.appwriteDatabaseId,
-  //       envt_imports.appwriteCollection2Id,
-  //       queries
-  //     );
-
-  //     const existingUsers = existingUsersResponse?.documents || [];
-
-  //     // Check if all details match an existing user
-  //     const allFieldsMatch = existingUsers.some(
-  //       (user) =>
-  //         user.PatientEmail === email &&
-  //         user.MobileNumber === mobile &&
-  //         user.FirstName === firstName &&
-  //         user.LastName === lastName &&
-  //         user.Gender === gender &&
-  //         user.Date_Of_Birth === formattedDob
-  //     );
-
-  //     if (allFieldsMatch) {
-  //       setAlert({
-  //         type: "error",
-  //         message: "User already exists with the same details.",
-  //       });
-  //       setLoading(false);
-  //       return;
-  //     }
-
-  //     // Allow signup for partial matches or new users
-  //     const registrationNumber = generateRegistrationNumber();
-  //     const createdUser = await databases.createDocument(
-  //       envt_imports.appwriteDatabaseId,
-  //       envt_imports.appwriteCollection2Id,
-  //       "unique()",
-  //       {
-  //         FirstName: firstName,
-  //         LastName: lastName,
-  //         PatientName: patientName,
-  //         PatientEmail: email || null,
-  //         MobileNumber: mobile || null,
-  //         Gender: gender,
-  //         RegistrationNumber: registrationNumber,
-  //         Date_Of_Birth: formattedDob,
-  //       }
-  //     );
-
-  //     console.log("User created in Appwrite:", createdUser);
-
-  //     localStorage.setItem("role", "user");
-  //     localStorage.setItem("registrationNumber", registrationNumber);
-
-  //     setAlert({
-  //       type: "success",
-  //       message: `Signup successful! Your Registration Number is ${registrationNumber}.`,
-  //       registrationNumber,
-  //     });
-
-  //     setFirstName("");
-  //     setLastName("");
-  //     setEmail("");
-  //     setMobile("");
-  //     setGender("");
-  //     setDob("");
-  //   } catch (error) {
-  //     console.error("Signup error:", error);
-  //     setAlert({ type: "error", message: "Signup failed. Please try again." });
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
+  
   const handleSignup = async (e) => {
     e.preventDefault();
   
@@ -168,19 +66,26 @@ const Signup = () => {
   
     try {
       const formattedDob = formatDateForStorage(dob);
+      console.log(formattedDob);
+      
       const patientName = `${firstName} ${lastName}`.trim();
-  
+      console.log("patientName",patientName);
+      
+      
       // Create a unique combination string
       const uniqueCombination = `${firstName}|${lastName}|${email || "null"}|${mobile || "null"}`;
-  
+      console.log("uniqueCombination",uniqueCombination);
+      
       // Query for existing users by unique combination
       const existingUsersResponse = await databases.listDocuments(
         envt_imports.appwriteDatabaseId,
         envt_imports.appwriteCollection2Id,
         [Query.equal("UniqueCombination", uniqueCombination)]
       );
-  
+      console.log("existingUsersResponse",existingUsersResponse);
+      
       const existingUsers = existingUsersResponse?.documents || [];
+      console.log("existingUsers",existingUsers);
   
       // Check if an exact match exists
       if (existingUsers.length > 0) {
@@ -194,6 +99,8 @@ const Signup = () => {
   
       // Allow signup for new users
       const registrationNumber = generateRegistrationNumber();
+      console.log("registration number",registrationNumber);
+      
       const createdUser = await databases.createDocument(
         envt_imports.appwriteDatabaseId,
         envt_imports.appwriteCollection2Id,
@@ -207,7 +114,7 @@ const Signup = () => {
           Gender: gender,
           RegistrationNumber: registrationNumber,
           Date_Of_Birth: formattedDob,
-          UniqueCombination: uniqueCombination, // Save the unique combination
+          UniqueCombination: uniqueCombination, 
         }
       );
   
@@ -352,7 +259,7 @@ const Signup = () => {
             {loading ? "Signing Up..." : "Sign Up"}
           </button>
         </form>
-        {/* Redirect to Login */}
+        
 <div className="mt-4 text-center">
   <p className="text-gray-700">
     Already have an account?{" "}

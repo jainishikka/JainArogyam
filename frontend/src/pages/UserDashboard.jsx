@@ -14,14 +14,14 @@ const UserDashboard = ({ registrationNumber }) => {
     const client = new Client().setEndpoint(envt_imports.appwriteUrl).setProject(envt_imports.appwriteProjectId);
     const databases = new Databases(client);
     const DATABASE_ID = envt_imports.appwriteDatabaseId;
-    const COLLECTION_ID = envt_imports.appwriteCollectionId; // `patient_data` collection ID
+    const COLLECTION_ID = envt_imports.appwriteCollectionId; 
 
     useEffect(() => {
         const fetchPatientData = async () => {
             try {
                 const response = await databases.listDocuments(
                     DATABASE_ID,
-                    envt_imports.appwriteCollection2Id, // `patient_information` collection ID
+                    envt_imports.appwriteCollection2Id, 
                     [Query.equal("RegistrationNumber", registrationNumber)]
                 );
 
