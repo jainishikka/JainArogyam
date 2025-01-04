@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Databases, Client } from "appwrite";
+import { Databases, Client, Query } from "appwrite";
 import envt_imports from "../envt_imports/envt_imports";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSortUp, faSortDown, faArrowsUpDown } from "@fortawesome/free-solid-svg-icons";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 
 const RegisteredUsersData = () => {
@@ -11,7 +12,6 @@ const RegisteredUsersData = () => {
     .setProject(envt_imports.appwriteProjectId);
 
   const databases = new Databases(client);
-
   const DATABASE_ID = envt_imports.appwriteDatabaseId;
   const COLLECTION_ID = envt_imports.appwriteCollection2Id;
 
@@ -21,86 +21,147 @@ const RegisteredUsersData = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [loading, setLoading] = useState(true);  // Loading state
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
+
+  const navigate = useNavigate();
 
   const fetchUsers = async () => {
+    let allUsers = [];
+    let offset = 0;
+    const limit = 100;
+    let hasMore = true;
+
     try {
-      const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID);
-      console.log("Response from Appwrite:", response);
-      const sortedUsers = response.documents || [];
-      
-      // Sort users by 'createdAt' in descending order (most recent first)
-      sortedUsers.sort((a, b) => new Date(b.$createdAt) - new Date(a.$createdAt));
-      
-      setUsers(sortedUsers);
-      setFilteredUsers(sortedUsers);
+      while (hasMore) {
+        const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+          Query.limit(limit),
+          Query.offset(offset),
+          Query.orderDesc("$createdAt"),
+        ]);
+
+        if (response.documents.length > 0) {
+          allUsers = [...allUsers, ...response.documents];
+          offset += response.documents.length;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setUsers(allUsers);
+      setFilteredUsers(allUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
       setErrorMessage("Failed to fetch users data. Please try again later.");
     } finally {
-      setLoading(false); // End loading after fetch
+      setLoading(false);
     }
-  };
-
-  const handleSearch = (event) => {
-    const query = event.target.value.toLowerCase();
-    setSearchQuery(query);
-
-    if (query.trim() === "") {
-      setFilteredUsers(users);
-    } else {
-      const filtered = users.filter((user) => {
-        const mobileNumber = user.MobileNumber || "";
-        return mobileNumber.toString().toLowerCase().includes(query);
-      });
-      setFilteredUsers(filtered);
-    }
-  };
-
-  const handleDateFilter = () => {
-    if (!fromDate && !toDate) {
-      setFilteredUsers(users);
-      return;
-    }
-
-    const fromDateTime = fromDate ? new Date(fromDate).getTime() : null;
-    const toDateTime = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : null; // Include entire 'toDate' day.
-
-    const filtered = users.filter((user) => {
-      const createdDateTime = new Date(user.$createdAt).getTime();
-
-      if (fromDateTime && toDateTime) {
-        return createdDateTime >= fromDateTime && createdDateTime <= toDateTime;
-      }
-      if (fromDateTime) {
-        return createdDateTime >= fromDateTime;
-      }
-      if (toDateTime) {
-        return createdDateTime <= toDateTime;
-      }
-      return true;
-    });
-
-    setFilteredUsers(filtered);
   };
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
-  const navigate = useNavigate();
+  const downloadData = () => {
+    const csvHeaders = [
+      "Registration No",
+      "First Name",
+      "Last Name",
+      "Gender",
+      "Email",
+      "Date Of Birth",
+      "Mobile",
+      "Created Date",
+    ];
 
-  return (
+    const csvContent = [
+      csvHeaders.join(","),
+      ...filteredUsers.map((user) =>
+        [
+          user.RegistrationNumber || "",
+          user.FirstName || "",
+          user.LastName || "",
+          user.Gender || "",
+          user.PatientEmail || "",
+          user.Date_Of_Birth
+            ? new Date(user.Date_Of_Birth).toLocaleDateString()
+            : "",
+          user.MobileNumber || "",
+          new Date(user.$createdAt).toLocaleString("en-GB"),
+        ].join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "registered_users_data.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const sortData = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+
+    const sortedData = [...filteredUsers].sort((a, b) => {
+      if (a[key] < b[key]) return direction === "asc" ? -1 : 1;
+      if (a[key] > b[key]) return direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    setFilteredUsers(sortedData);
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key === key) {
+      return sortConfig.direction === "asc" ? (
+        <FontAwesomeIcon icon={faSortUp} />
+      ) : (
+        <FontAwesomeIcon icon={faSortDown} />
+      );
+    }
+    return <FontAwesomeIcon icon={faArrowsUpDown} />;
+  };
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const currentPageData = filteredUsers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  
+ return (
     <div className="min-h-screen bg-gradient-to-br from-green-100 to-blue-500 p-6">
       <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-xl p-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Registered Users Data</h1>
-
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">
+          Registered Users Data
+        </h1>
+        {/* Navigation and Download Buttons */}
         <button
           onClick={() => navigate("/admin-dashboard")}
           className="mb-6 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
         >
           Appointment Details
         </button>
+        <button
+          onClick={downloadData}
+          className="mb-6 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+        >
+          Download Data
+        </button>
+        
 
         {/* Error Message */}
         {errorMessage && (
@@ -109,93 +170,156 @@ const RegisteredUsersData = () => {
           </div>
         )}
 
-        {/* Date Filters */}
+        {/* Filters and Search */}
         <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-            <input
-              type="date"
-              className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-            <input
-              type="date"
-              className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-            />
-          </div>
-          <div className="flex items-end">
-            <button
-              onClick={handleDateFilter}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 w-full transition"
-            >
-              Apply Filter
-            </button>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="mb-4">
           <input
-            type="text"
-            className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Search by Mobile Number..."
-            value={searchQuery}
-            onChange={handleSearch}
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="p-2 border rounded-md"
           />
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="p-2 border rounded-md"
+          />
+          <button
+            onClick={() =>
+              setFilteredUsers(
+                users.filter((user) => {
+                  const createdDate = new Date(user.$createdAt);
+                  return (
+                    (!fromDate || createdDate >= new Date(fromDate)) &&
+                    (!toDate || createdDate <= new Date(toDate))
+                  );
+                })
+              )
+            }
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+          >
+            Apply Filter
+          </button>
         </div>
 
-        {/* Loading Spinner */}
-        {loading && (
-          <div className="flex justify-center py-4">
-            <FontAwesomeIcon
-              icon={faSpinner}
-              spin
-              className="text-blue-500 text-3xl"
-            />
-          </div>
-        )}
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) =>
+            setFilteredUsers(
+              users.filter((user) =>
+                user.MobileNumber?.toLowerCase().includes(
+                  e.target.value.toLowerCase()
+                )
+              )
+            )
+          }
+          className="w-full p-2 border rounded-md mb-4"
+          placeholder="Search by Mobile Number..."
+        />
+        
 
-        {/* Table */}
-        <div className="overflow-x-auto mt-6">
-          <table className="min-w-full table-auto border-collapse border border-gray-200">
-            <thead>
-              <tr className="bg-gray-200 text-gray-700">
-                <th className="border border-gray-300 px-4 py-2">Registration Number</th>
-                <th className="border border-gray-300 px-4 py-2">First Name</th>
-                <th className="border border-gray-300 px-4 py-2">Last Name</th>
-                <th className="border border-gray-300 px-4 py-2">Mobile Number</th>
-                <th className="border border-gray-300 px-4 py-2">Created Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.length > 0 ? (
-                filteredUsers.map((user) => (
-                  <tr key={user.$id} className="hover:bg-gray-100 transition">
-                    <td className="border border-gray-300 px-4 py-2">{user.RegistrationNumber}</td>
-                    <td className="border border-gray-300 px-4 py-2">{user.FirstName || "N/A"}</td>
-                    <td className="border border-gray-300 px-4 py-2">{user.LastName || "N/A"}</td>
-                    <td className="border border-gray-300 px-4 py-2">{user.MobileNumber || "N/A"}</td>
-                    <td className="border border-gray-300 px-4 py-2">
-                      {user.$createdAt ? new Date(user.$createdAt).toLocaleString("en-GB") : "N/A"}
+        {/* Data Table */}
+        {loading && <FontAwesomeIcon icon={faSpinner} spin />}
+        {!loading && (
+          <div className="mt-6 overflow-x-auto">
+            <table className="min-w-full border-collapse">
+              <thead className="bg-gray-200">
+                <tr>
+                  {[
+                    { label: "Registration No", key: "RegistrationNumber" },
+                    { label: "First Name", key: "FirstName" },
+                    { label: "Last Name", key: "LastName" },
+                    { label: "Gender", key: "Gender" },
+                    { label: "Email", key: "PatientEmail" },
+                    { label: "Date Of Birth", key: "Date_Of_Birth" },
+                    { label: "Mobile", key: "MobileNumber" },
+                    { label: "Created Date", key: "$createdAt" },
+                  ].map((column) => (
+                    <th
+                      key={column.key}
+                      className="px-4 py-2 border cursor-pointer"
+                      onClick={() => sortData(column.key)}
+                    >
+                      {column.label} {getSortIcon(column.key)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              {/* <tbody>
+                {filteredUsers.slice(0, itemsPerPage).map((user) => (
+                  <tr key={user.$id} className="border-b">
+                    <td className="px-4 py-2">{user.RegistrationNumber || "N/A"}</td>
+                    <td className="px-4 py-2">{user.FirstName || "N/A"}</td>
+                    <td className="px-4 py-2">{user.LastName || "N/A"}</td>
+                    <td className="px-4 py-2">{user.Gender || "N/A"}</td>
+                    <td className="px-4 py-2">{user.PatientEmail || "N/A"}</td>
+                    <td className="px-4 py-2">
+                      {user.Date_Of_Birth
+                        ? new Date(user.Date_Of_Birth).toLocaleDateString()
+                        : "N/A"}
+                    </td>
+                    <td className="px-4 py-2">{user.MobileNumber || "N/A"}</td>
+                    <td className="px-4 py-2">
+                      {new Date(user.$createdAt).toLocaleString("en-GB")}
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="6" className="text-center text-gray-500 py-4">
-                    No users found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody> */}
+               <tbody>
+                {currentPageData.map((user) => (
+                  <tr key={user.$id} className="border-b">
+                    <td className="px-4 py-2">{user.RegistrationNumber || "N/A"}</td>
+                    <td className="px-4 py-2">{user.FirstName || "N/A"}</td>
+                    <td className="px-4 py-2">{user.LastName || "N/A"}</td>
+                    <td className="px-4 py-2">{user.Gender || "N/A"}</td>
+                    <td className="px-4 py-2">{user.PatientEmail || "N/A"}</td>
+                    <td className="px-4 py-2">
+                      {user.Date_Of_Birth
+                        ? new Date(user.Date_Of_Birth).toLocaleDateString()
+                        : "N/A"}
+                    </td>
+                    <td className="px-4 py-2">{user.MobileNumber || "N/A"}</td>
+                    <td className="px-4 py-2">
+                      {new Date(user.$createdAt).toLocaleString("en-GB")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+
+            </table>
+
+            <div className="mt-4 flex justify-center space-x-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+                className="px-3 py-1 bg-gray-300 rounded disabled:opacity-50"
+              >
+                Previous
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-3 py-1 rounded ${
+                    page === currentPage
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-300"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="px-3 py-1 bg-gray-300 rounded disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
