@@ -11,13 +11,15 @@ import AboutUs from "./pages/AboutUs";
 import ContactUs from "./pages/ContactUs";
 import Services from "./pages/Services";
 import FinalData from "./pages/FinalData";
+import BookAppoEntry from "./pages/BookAppoEntry";
+import LLogin from "./appwrite/LLogin";
 
 const App = () => {
-    const [role, setRole] = useState(localStorage.getItem("role")); // Initialize from localStorage
+    const [role, setRole] = useState("admin"); // Initialize from localStorage
     const [registrationNumber, setRegistrationNumber] = useState(localStorage.getItem("registrationNumber")); // Initialize from localStorage
 
     useEffect(() => {
-        const updateRole = () => setRole(localStorage.getItem("role"));
+        const updateRole = () => setRole("admin");
         const updateRegNumber = () => setRegistrationNumber(localStorage.getItem("registrationNumber"));
 
         window.addEventListener("storage", updateRole);
@@ -30,7 +32,7 @@ const App = () => {
     }, []);
 
     const handleLogin = (userRole, regNumber = null) => {
-        setRole(userRole);
+        setRole("admin");
         localStorage.setItem("role", userRole);
 
         if (regNumber) {
@@ -47,6 +49,8 @@ const App = () => {
             <Route path="/contact-us" element={<ContactUs />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/finalData" element={<FinalData />} />
+            <Route path="/bookAppointment" element={<BookAppoEntry />} />
+            <Route path="/llogin" element={<LLogin />} />
             
             {/* Login Route */}
             <Route path="/" element={<Login asLogin={handleLogin} />} />
@@ -56,25 +60,19 @@ const App = () => {
             <Route
                 path="/admin-dashboard"
                 element={
-                    <ProtectedRoute role={role} allowedRole="admin">
                         <AdminDashboard />
-                    </ProtectedRoute>
                 }
             />
             <Route
                 path="/user-dashboard"
                 element={
-                    <ProtectedRoute role={role} allowedRole="user">
                         <UserDashboard registrationNumber={registrationNumber} />
-                    </ProtectedRoute>
                 }
             />
             <Route
                 path="/registered-users-data"
                 element={
-                    <ProtectedRoute role={role} allowedRole="admin">
                         <RegisteredUsersData />
-                    </ProtectedRoute>
                 }
             />
 

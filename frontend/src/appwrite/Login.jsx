@@ -68,7 +68,7 @@ const Login = ({ asLogin }) => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-500">
       <div className="w-full max-w-md bg-white rounded-lg shadow-2xl p-8">
         <h1 className="text-3xl font-semibold text-center text-gray-800 mb-8">
-          Welcome to <span className="text-blue-500">Jain Arogyam</span>
+         <span className="text-blue-500">Book Appointment</span>
         </h1>
 
         <form onSubmit={handleLogin} className="space-y-6">
@@ -118,12 +118,12 @@ const Login = ({ asLogin }) => {
             disabled={loading}
             className="w-full bg-blue-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring focus:ring-blue-200 disabled:bg-gray-400 transition"
           >
-            {loading ? "Logging In..." : "Login"}
+            {loading ? "  ging In..." : "Book Appointment"}
           </button>
         </form>
 
         <div className="mt-4 flex items-center justify-between">
-          <label className="flex items-center text-sm">
+          {/* <label className="flex items-center text-sm">
             <input
               type="checkbox"
               checked={isAdminLogin}
@@ -131,10 +131,10 @@ const Login = ({ asLogin }) => {
               className="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-400"
             />
             <span className="ml-2">Admin Login</span>
-          </label>
-          <Link to="/signup" className="text-sm text-blue-500 hover:underline">
+          </label> */}
+          {/* <Link to="/signup" className="text-sm text-blue-500 hover:underline">
             Don't have an account? Sign Up
-          </Link>
+          </Link> */}
         </div>
 
         {error && <p className="mt-4 text-sm text-red-500">{error}</p>}

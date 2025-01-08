@@ -15,6 +15,7 @@ const UserDashboard = ({ registrationNumber }) => {
     const databases = new Databases(client);
     const DATABASE_ID = envt_imports.appwriteDatabaseId;
     const COLLECTION_ID = envt_imports.appwriteCollectionId; 
+    // const COLLECTION_ID = envt_imports.appwriteCollection2Id; 
 
     useEffect(() => {
         const fetchPatientData = async () => {
@@ -82,7 +83,7 @@ const UserDashboard = ({ registrationNumber }) => {
     };
 
     const handleRedirectToLogin = () => {
-        navigate("/");
+        navigate("/admin-dashboard");
     };
 
     return (
@@ -136,7 +137,7 @@ const UserDashboard = ({ registrationNumber }) => {
                             onClick={handleRedirectToLogin}
                             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
                         >
-                            Go to Login Page
+                            Go to Appointment Page
                         </button>
                     </div>
                 )}

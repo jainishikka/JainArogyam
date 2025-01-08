@@ -2,6 +2,8 @@ import { format } from "date-fns";
 import { useState, useEffect } from "react";
 import { Databases, Client, Query } from "appwrite";
 import envt_imports from "../envt_imports/envt_imports";
+import '@fortawesome/fontawesome-free/css/all.min.css';
+
 import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
@@ -17,6 +19,10 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   const [patients, setPatients] = useState([]);
+  const [displayedPatients, setDisplayedPatients] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage] = useState(10);
+  const [sortConfig, setSortConfig] = useState({ field: null, direction: "asc" });
   const [searchDateFrom, setSearchDateFrom] = useState("");
   const [searchDateTo, setSearchDateTo] = useState("");
   const [searchRegNumber, setSearchRegNumber] = useState("");
@@ -91,6 +97,59 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchPatients = async () => {
+    try {
+      setIsLoading(true);
+      const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID);
+      setPatients(response.documents || []);
+    } catch (error) {
+      console.error("Error fetching patients:", error);
+      setErrorMessage("Failed to fetch records. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const sortPatients = (field) => {
+    const direction =
+      sortConfig.field === field && sortConfig.direction === "asc" ? "desc" : "asc";
+    setSortConfig({ field, direction });
+  
+    const sortedPatients = [...patients].sort((a, b) => {
+      const valA = a[field] || ""; // Handle null/undefined gracefully
+      const valB = b[field] || "";
+  
+      if (typeof valA === "string" && typeof valB === "string") {
+        return direction === "asc"
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
+      } else if (typeof valA === "number" && typeof valB === "number") {
+        return direction === "asc" ? valA - valB : valB - valA;
+      } else if (valA instanceof Date && valB instanceof Date) {
+        return direction === "asc"
+          ? new Date(valA) - new Date(valB)
+          : new Date(valB) - new Date(valA);
+      }
+      return 0; // Default case
+    });
+  
+    setPatients(sortedPatients);
+  };
+  
+  
+  
+
+  
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    setDisplayedPatients(patients.slice(startIndex, endIndex));
+  }, [patients, currentPage, rowsPerPage]);
+
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
   const handleFieldChange = (id, field, value) => {
     setPatients((prev) =>
       prev.map((patient) =>
@@ -145,11 +204,26 @@ const AdminDashboard = () => {
     fetchActivePatients();
   }, []);
 
+  const headers = [
+    { label: "Registration Number", field: "RegistrationNumber" },
+    { label: "Appointment Date", field: "AppointmentDate" },
+    { label: "Patient Name", field: "PatientName" },
+    { label: "Patient Problem", field: "PatientProblem" },
+    { label: "Doctor Attended", field: "DoctorAttended" },
+    { label: "Treatment Done", field: "TreatmentDone" },
+    { label: "Package Purchased", field: "PackagePurchased" },
+    { label: "Remaining Sessions", field: "RemainingSessions" },
+    { label: "Payment Received", field: "PaymentReceived" },
+    { label: "Payment Mode", field: "PaymentMode" },
+    { label: "Remarks", field: "Remarks" },
+  ];
+  
+
   return (
     <div className="min-h-screen bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 p-6">
       <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-xl p-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">Admin Dashboard</h1>
-
+  
         {/* Navigation Buttons */}
         <div className="mb-6 flex justify-between">
           <button
@@ -165,7 +239,7 @@ const AdminDashboard = () => {
             View Final Data
           </button>
         </div>
-
+  
         {/* Search Form */}
         <form onSubmit={handleSearch} className="mb-6 flex flex-col md:flex-row gap-4">
           <input
@@ -196,14 +270,14 @@ const AdminDashboard = () => {
             Search
           </button>
         </form>
-
+  
         {/* Error Message */}
         {errorMessage && (
           <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4 text-center">
             {errorMessage}
           </div>
         )}
-
+  
         {/* Loading Spinner */}
         {isLoading ? (
           <div className="flex justify-center items-center py-6">
@@ -211,644 +285,178 @@ const AdminDashboard = () => {
           </div>
         ) : (
           <div className="w-full overflow-x-auto">
-          <table className="table-auto w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-200">
-                {[
-                  "Registration Number",
-                  "Appointment Date",
-                  "Patient Name",
-                  "Patient Problem",
-                  "Doctor Attended",
-                  "Treatment Done",
-                  "Package Purchased",
-                  "Remaining Sessions",
-                  "Payment Received",
-                  "Payment Mode",
-                  "Remarks",
-                  "Actions",
-                ].map((header) => (
-                  <th
-                    key={header}
-                    className="px-6 py-2 border border-gray-300 text-left"
-                    style={{ whiteSpace: 'normal', wordWrap: 'break-word' }}
-                  >
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {patients.length > 0 ? (
-                patients.map((patient) => (
-                  <tr key={patient.$id}>
-                    {/* Registration Number */}
-                    <td className="px-6 py-2 border" style={{ minWidth: '200px' }}>
-                      <input
-                        type="text"
-                        value={patient.RegistrationNumber || ""}
-                        onChange={(e) =>
-                          handleFieldChange(patient.$id, "RegistrationNumber", e.target.value)
-                        }
-                        className="border rounded px-2 py-1 w-full"
-                      />
-                    </td>
-                    
-                    {/* Appointment Date */}
-                    <td className="px-6 py-2 border" style={{ minWidth: '150px' }}>
-                      <input
-                        type="date"
-                        value={patient.AppointmentDate ? format(new Date(patient.AppointmentDate), "yyyy-MM-dd") : ""}
-                        onChange={(e) =>
-                          handleFieldChange(patient.$id, "AppointmentDate", e.target.value)
-                        }
-                        className="border rounded px-2 py-1 w-full"
-                      />
-                    </td>
-                    
-                    {/* Patient Name */}
-                    <td className="px-6 py-2 border" style={{ minWidth: '250px' }}>
-                      <input
-                        type="text"
-                        value={patient.PatientName || ""}
-                        onChange={(e) =>
-                          handleFieldChange(patient.$id, "PatientName", e.target.value)
-                        }
-                        className="border rounded px-2 py-1 w-full"
-                        style={{ whiteSpace: 'normal', wordWrap: 'break-word' }}
-                      />
-                    </td>
-        
-                    {/* Patient Problem */}
-                    <td className="px-6 py-2 border" style={{ minWidth: '300px' }}>
-                      <input
-                        type="text"
-                        value={patient.PatientProblem || ""}
-                        onChange={(e) =>
-                          handleFieldChange(patient.$id, "PatientProblem", e.target.value)
-                        }
-                        className="border rounded px-2 py-1 w-full"
-                        style={{ whiteSpace: 'normal', wordWrap: 'break-word' }}
-                      />
-                    </td>
-        
-                    {/* Doctor Attended */}
-                    <td className="px-6 py-2 border" style={{ minWidth: '200px' }}>
-                      <input
-                        type="text"
-                        value={patient.DoctorAttended || ""}
-                        onChange={(e) =>
-                          handleFieldChange(patient.$id, "DoctorAttended", e.target.value)
-                        }
-                        className="border rounded px-2 py-1 w-full"
-                        style={{ whiteSpace: 'normal', wordWrap: 'break-word' }}
-                      />
-                    </td>
-        
-                    {/* Treatment Done */}
-                    <td className="px-6 py-2 border" style={{ minWidth: '200px' }}>
-                      <input
-                        type="text"
-                        value={patient.TreatmentDone || ""}
-                        onChange={(e) =>
-                          handleFieldChange(patient.$id, "TreatmentDone", e.target.value)
-                        }
-                        className="border rounded px-2 py-1 w-full"
-                        style={{ whiteSpace: 'normal', wordWrap: 'break-word' }}
-                      />
-                    </td>
-        
-                    {/* Package Purchased */}
-                    <td className="px-6 py-2 border text-center">
-                      <input
-                        type="checkbox"
-                        checked={patient.PackagePurchased || false}
-                        onChange={(e) =>
-                          handleFieldChange(patient.$id, "PackagePurchased", e.target.checked)
-                        }
-                        className="h-5 w-5"
-                      />
-                    </td>
-        
-                    {/* Remaining Sessions */}
-                    <td className="px-6 py-2 border">
-                      <input
-                        type="number"
-                        value={patient.RemainingSessions || 0}
-                        onChange={(e) => {
-                          // Ensure value is not negative
-                          const newValue = Math.max(0, e.target.value); // Prevent negative values
-                          handleFieldChange(patient.$id, "RemainingSessions", newValue);
-                        }}
-                        className="border rounded px-2 py-1 w-full"
-                        min="0" // Prevent negative numbers in the input field
-                        step="1" // Ensure it's an integer
-                      />
-                    </td>
-        
-                    {/* Payment Received */}
-                    <td className="px-6 py-2 border text-center">
-                      <input
-                        type="checkbox"
-                        checked={patient.PaymentReceived || false}
-                        onChange={(e) =>
-                          handleFieldChange(patient.$id, "PaymentReceived", e.target.checked)
-                        }
-                        className="h-5 w-5"
-                      />
-                    </td>
-        
-                    {/* Payment Mode */}
-                    <td className="px-6 py-2 border">
-                      <input
-                        type="text"
-                        value={patient.PaymentMode || ""}
-                        onChange={(e) =>
-                          handleFieldChange(patient.$id, "PaymentMode", e.target.value)
-                        }
-                        className="border rounded px-2 py-1 w-full"
-                        style={{ whiteSpace: 'normal', wordWrap: 'break-word' }}
-                      />
-                    </td>
-        
-                    {/* Remarks */}
-                    <td className="px-6 py-2 border">
-                      <input
-                        type="text"
-                        value={patient.Remarks || ""}
-                        onChange={(e) =>
-                          handleFieldChange(patient.$id, "Remarks", e.target.value)
-                        }
-                        className="border rounded px-2 py-1 w-full"
-                        style={{ whiteSpace: 'normal', wordWrap: 'break-word' }}
-                      />
-                    </td>
-        
-                    {/* Actions */}
-                    <td className="px-6 py-2 border text-center">
-                      <button
-                        onClick={() => handleFinalizeRecord(patient)}
-                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
-                      >
-                        Finalize
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="12" className="text-center py-4">No records found</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            <table className="table-auto w-full border-collapse border border-gray-300">
+           
+          <thead>
+<tr className="bg-gray-200">
+  {headers.map(({ label, field }) => (
+    <th
+      key={field}
+      className="px-6 py-2 border border-gray-300 text-left cursor-pointer"
+      onClick={() => sortPatients(field)}
+    >
+      {label}
+      <span className="ml-2">
+        {sortConfig.field === field && (
+          sortConfig.direction === "asc" ? (
+            <i className="fas fa-arrow-up text-gray-500"></i>
+          ) : (
+            <i className="fas fa-arrow-down text-gray-500"></i>
+          )
         )}
-      </div>
-    </div>
-  );
-};
-
-export default AdminDashboard;
-
+      </span>
+    </th>
+  ))}
+</tr>
+</thead>
 
 
+<tbody>
+{patients.length > 0 ? (
+  patients.map((patient) => (
+    <tr key={patient.$id}>
+      {[
+        { field: "RegistrationNumber", type: "text", minWidth: "200px" },
+        {
+          field: "AppointmentDate",
+          type: "date",
+          minWidth: "150px",
+          formatValue: (value) =>
+            value ? new Date(value).toISOString().slice(0, 10) : "", // Ensure correct date format
+        },
+        { field: "PatientName", type: "text", minWidth: "250px" },
+        { field: "PatientProblem", type: "text", minWidth: "300px" },
+        { field: "DoctorAttended", type: "text", minWidth: "200px" },
+        { field: "TreatmentDone", type: "text", minWidth: "200px" },
+      ].map(({ field, type, minWidth, formatValue }) => (
+        <td
+          key={`${patient.$id}-${field}`}
+          className="px-6 py-2 border"
+          style={{ minWidth }}
+        >
+          <input
+            type={type}
+            value={
+              formatValue ? formatValue(patient[field]) : patient[field] || ""
+            }
+            onChange={(e) =>
+              handleFieldChange(patient.$id, field, e.target.value)
+            }
+            className="border rounded px-2 py-1 w-full"
+          />
+        </td>
+      ))}
+      <td className="px-6 py-2 border text-center">
+        <input
+          type="checkbox"
+          checked={patient.PackagePurchased || false}
+          onChange={(e) =>
+            handleFieldChange(patient.$id, "PackagePurchased", e.target.checked)
+          }
+          className="h-5 w-5"
+        />
+      </td>
+      <td className="px-6 py-2 border">
+        <input
+          type="number"
+          value={patient.RemainingSessions || 0}
+          onChange={(e) =>
+            handleFieldChange(
+              patient.$id,
+              "RemainingSessions",
+              Math.max(0, parseInt(e.target.value, 10) || 0)
+            )
+          }
+          className="border rounded px-2 py-1 w-full"
+        />
+      </td>
+      <td className="px-6 py-2 border text-center">
+        <input
+          type="checkbox"
+          checked={patient.PaymentReceived || false}
+          onChange={(e) =>
+            handleFieldChange(patient.$id, "PaymentReceived", e.target.checked)
+          }
+          className="h-5 w-5"
+        />
+      </td>
+      <td className="px-6 py-2 border">
+        <input
+          type="text"
+          value={patient.PaymentMode || ""}
+          onChange={(e) =>
+            handleFieldChange(patient.$id, "PaymentMode", e.target.value)
+          }
+          className="border rounded px-2 py-1 w-full"
+        />
+      </td>
+      <td className="px-6 py-2 border">
+        <input
+          type="text"
+          value={patient.Remarks || ""}
+          onChange={(e) =>
+            handleFieldChange(patient.$id, "Remarks", e.target.value)
+          }
+          className="border rounded px-2 py-1 w-full"
+        />
+      </td>
+      <td className="px-6 py-2 border text-center">
+        <button
+          onClick={() => handleFinalizeRecord(patient)}
+          className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+          aria-label={`Finalize record for ${patient.PatientName}`}
+        >
+          Finalize
+        </button>
+      </td>
+    </tr>
+  ))
+) : (
+  <tr>
+    <td colSpan="12" className="text-center py-4">
+      No records found
+    </td>
+  </tr>
+)}
+</tbody>
 
 
-
-import { format } from "date-fns";
-import { useState, useEffect } from "react";
-import { Databases, Client, Query } from "appwrite";
-import envt_imports from "../envt_imports/envt_imports";
-import { useNavigate } from "react-router-dom";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSort } from '@fortawesome/free-solid-svg-icons';
-
-
-const AdminDashboard = () => {
-  const client = new Client()
-    .setEndpoint(envt_imports.appwriteUrl)
-    .setProject(envt_imports.appwriteProjectId);
-
-  const databases = new Databases(client);
-
-  const DATABASE_ID = envt_imports.appwriteDatabaseId;
-  const COLLECTION_ID = envt_imports.appwriteCollectionId;
-  const FINAL_COLLECTION_ID = envt_imports.appwriteFinalDataCollectionId;
-  const navigate = useNavigate();
-
-  const [patients, setPatients] = useState([]);
-  const [searchDateFrom, setSearchDateFrom] = useState("");
-  const [searchDateTo, setSearchDateTo] = useState("");
-  const [searchRegNumber, setSearchRegNumber] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
-  
-
-  const fetchActivePatients = async (queryConditions = []) => {
-    try {
-      setIsLoading(true);
-      const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
-        ...queryConditions,
-        Query.orderDesc("AppointmentDate"),
-      ]);
-      setPatients(response.documents || []);
-    } catch (error) {
-      console.error("Error fetching active patients:", error);
-      setErrorMessage("Failed to fetch patient records. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
-
-    const sortedPatients = [...patients].sort((a, b) => {
-      if (a[key] < b[key]) return direction === "asc" ? -1 : 1;
-      if (a[key] > b[key]) return direction === "asc" ? 1 : -1;
-      return 0;
-    });
-    setPatients(sortedPatients);
-  };
-
-  const getSortIcon = (key) => {
-    if (sortConfig.key === key) {
-      return sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />;
-    }
-    return <FaSort />;
-  };
-
-  useEffect(() => {
-    fetchActivePatients();
-  }, []);
-
-  const currentPatients = patients.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  return (
-    <div className="min-h-screen bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 p-6">
-      <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-xl p-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">Admin Dashboard</h1>
-
-        <div className="w-full overflow-x-auto">
-          <table className="table-auto w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-200">
-                {[
-                  "RegistrationNumber",
-                  "AppointmentDate",
-                  "PatientName",
-                  "PatientProblem",
-                  "DoctorAttended",
-                  "TreatmentDone",
-                  "PackagePurchased",
-                  "RemainingSessions",
-                  "PaymentReceived",
-                  "PaymentMode",
-                  "Remarks",
-                ].map((header) => (
-                  <th
-                    key={header}
-                    onClick={() => handleSort(header)}
-                    className="px-6 py-2 border border-gray-300 text-left cursor-pointer flex items-center gap-2"
-                  >
-                    {header.replace(/([A-Z])/g, " $1").trim()}
-                    {getSortIcon(header)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {currentPatients.length > 0 ? (
-                currentPatients.map((patient) => (
-                  <tr key={patient.$id}>
-                    <td className="px-6 py-2 border">{patient.RegistrationNumber}</td>
-                    <td className="px-6 py-2 border">{patient.AppointmentDate}</td>
-                    <td className="px-6 py-2 border">{patient.PatientName}</td>
-                    <td className="px-6 py-2 border">{patient.PatientProblem}</td>
-                    <td className="px-6 py-2 border">{patient.DoctorAttended}</td>
-                    <td className="px-6 py-2 border">{patient.TreatmentDone}</td>
-                    <td className="px-6 py-2 border">{patient.PackagePurchased ? "Yes" : "No"}</td>
-                    <td className="px-6 py-2 border">{patient.RemainingSessions}</td>
-                    <td className="px-6 py-2 border">{patient.PaymentReceived ? "Yes" : "No"}</td>
-                    <td className="px-6 py-2 border">{patient.PaymentMode}</td>
-                    <td className="px-6 py-2 border">{patient.Remarks}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="11" className="text-center py-4">
-                    No records found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default AdminDashboard;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-import { useState, useEffect } from "react";
-import { Databases, Query, Client } from "appwrite";
-import envt_imports from "../envt_imports/envt_imports";
-import { Link } from "react-router-dom";
-
-const FinalData = () => {
-  const client = new Client()
-    .setEndpoint(envt_imports.appwriteUrl)
-    .setProject(envt_imports.appwriteProjectId);
-  const databases = new Databases(client);
-
-  const DATABASE_ID = envt_imports.appwriteDatabaseId;
-  const FINAL_COLLECTION_ID = envt_imports.appwriteFinalDataCollectionId;
-
-  const [finalizedPatients, setFinalizedPatients] = useState([]);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [registrationSearch, setRegistrationSearch] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
-
-  const fetchFinalizedPatients = async () => {
-    try {
-      setIsLoading(true);
-
-      const queries = [];
-      if (startDate && endDate) {
-        const { startOfDay: startFrom } = getStartAndEndOfDay(startDate);
-        const { endOfDay: endTo } = getStartAndEndOfDay(endDate);
-        queries.push(Query.between("AppointmentDates", startFrom, endTo));
-      }
-      if (registrationSearch) {
-        queries.push(Query.equal("RegistrationNumber", registrationSearch));
-      }
-      queries.push(Query.orderDesc("AppointmentDates"));
-
-      const response = await databases.listDocuments(DATABASE_ID, FINAL_COLLECTION_ID, queries);
-      setFinalizedPatients(response.documents);
-    } catch (error) {
-      console.error("Error fetching finalized patients:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchFinalizedPatients();
-  }, []);
-
-  const getStartAndEndOfDay = (dateString) => {
-    const date = new Date(dateString);
-    const startOfDay = new Date(date.setHours(0, 0, 0, 0)).toISOString();
-    const endOfDay = new Date(date.setHours(23, 59, 59, 999)).toISOString();
-    return { startOfDay, endOfDay };
-  };
-
-  const downloadData = () => {
-    const csvHeaders = [
-      "Registration Number",
-      "Appointment Date",
-      "Patient Name",
-      "Patient Problem",
-      "Doctor Attended",
-      "Treatment Done",
-      "Package Purchased",
-      "Remaining Sessions",
-      "Payment Received",
-      "Remarks",
-    ];
-  
-    // Map data to ensure it aligns correctly with headers
-    const csvContent = [
-      csvHeaders.join(","), // Join headers
-      ...finalizedPatients.map((patient) => {
-        const row = [
-          patient.RegistrationNumber || "", // Registration Number
-          patient.AppointmentDates
-            ? new Date(patient.AppointmentDates).toLocaleDateString() // Appointment Date
-            : "N/A",
-          patient.PatientName || "", // Patient Name
-          patient.PatientProblem || "", // Patient Problem
-          patient.DoctorAttended || "", // Doctor Attended
-          patient.TreatmentDone || "", // Treatment Done
-          patient.PackagePurchased || "", // Package Purchased
-          patient.RemainingSessions || "", // Remaining Sessions
-          patient.PaymentReceived || "", // Payment Received
-          patient.Remarks || "", // Remarks
-        ];
-        return row.map((value) => `"${value}"`).join(","); // Wrap each value in quotes to handle commas
-      }),
-    ].join("\n");
-  
-    // Create and download the CSV file
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "finalized_patients_data.csv";
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const sortData = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
-
-    const sortedPatients = [...finalizedPatients].sort((a, b) => {
-      if (direction === "asc") {
-        return a[key] > b[key] ? 1 : -1;
-      } else {
-        return a[key] < b[key] ? 1 : -1;
-      }
-    });
-    setFinalizedPatients(sortedPatients);
-  };
-
-  const getSortIcon = (key) => {
-    if (sortConfig.key === key) {
-      return sortConfig.direction === "asc" ? "▲" : "▼";
-    }
-    return "⇅";
-  };
-  
-
-  return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-500 to-purple-600 p-6">
-      <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-xl p-6">
-        <h1 className="text-4xl font-bold text-blue-800 text-center mb-8">
-          Finalized Patients Data
-        </h1>
-
-        <div className="flex justify-center gap-6 mb-8">
-          <Link
-            to="/admin-dashboard"
-            className="bg-blue-600 text-white py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 ease-in-out transform hover:scale-105"
-          >
-            Appointment Details
-          </Link>
-          <Link
-            to="/registered-users-data"
-            className="bg-indigo-600 text-white py-3 px-6 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 ease-in-out transform hover:scale-105"
-          >
-            View Registered Users
-          </Link>
-        </div>
-
-        <div className="flex flex-wrap gap-6 mb-8 items-center justify-center">
-          <div className="flex flex-col">
-            <label htmlFor="startDate" className="text-sm font-semibold mb-2">
-              Start Date
-            </label>
-            <input
-              type="date"
-              id="startDate"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="border border-gray-300 rounded-lg px-4 py-2"
-            />
+            </table>
           </div>
-          <div className="flex flex-col">
-            <label htmlFor="endDate" className="text-sm font-semibold mb-2">
-              End Date
-            </label>
-            <input
-              type="date"
-              id="endDate"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="border border-gray-300 rounded-lg px-4 py-2"
-            />
-          </div>
-          <div className="flex flex-col">
-            <label htmlFor="registrationSearch" className="text-sm font-semibold mb-2">
-              Registration Number
-            </label>
-            <input
-              type="text"
-              id="registrationSearch"
-              value={registrationSearch}
-              onChange={(e) => setRegistrationSearch(e.target.value)}
-              className="border border-gray-300 rounded-lg px-4 py-2"
-            />
-          </div>
+        )}
+  
+        {/* Pagination Controls */}
+        <div className="mt-4 flex justify-center space-x-2">
           <button
-            onClick={fetchFinalizedPatients}
-            className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-all"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => prev - 1)}
+            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
           >
-            Search
+            Previous
+          </button>
+          {[...Array(Math.ceil(patients.length / rowsPerPage)).keys()].map((pageNum) => (
+            <button
+              key={pageNum}
+              onClick={() => setCurrentPage(pageNum + 1)}
+              className={`px-4 py-2 rounded ${
+                currentPage === pageNum + 1 ? "bg-blue-500 text-white" : "bg-gray-300"
+              }`}
+            >
+              {pageNum + 1}
+            </button>
+          ))}
+          <button
+            disabled={currentPage === Math.ceil(patients.length / rowsPerPage)}
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+          >
+            Next
           </button>
         </div>
-
-        <button
-          onClick={downloadData}
-          className="bg-green-500 text-white px-6 py-2 mb-8 rounded-lg hover:bg-green-600 transition-all"
-        >
-          Download Data
-        </button>
-
-        {isLoading ? (
-          <div className="flex justify-center py-6">
-            <div className="loader ease-linear rounded-full border-8 border-t-8 border-indigo-300 h-16 w-16"></div>
-          </div>
-        ) : (
-        <div className="overflow-x-auto">
-        <table className="min-w-full table-auto border-collapse border border-gray-300 shadow-md">
-          <thead>
-            <tr className="bg-indigo-100 text-gray-700">
-              {[
-                { key: "RegistrationNumber", label: "Registration Number" },
-                { key: "AppointmentDates", label: "Appointment Date" },
-                { key: "PatientName", label: "Patient Name" },
-                { key: "PatientProblem", label: "Patient Problem" },
-                { key: "DoctorAttended", label: "Doctor Attended" },
-                { key: "TreatmentDone", label: "Treatment Done" },
-                { key: "PackagePurchased", label: "Package Purchased" },
-                { key: "RemainingSessions", label: "Remaining Sessions" },
-                { key: "PaymentReceived", label: "Payment Received" },
-                { key: "Remarks", label: "Remarks" },
-              ].map((column) => (
-                <th
-                  key={column.key}
-                  className="border border-gray-300 px-6 py-3 text-left text-sm font-semibold cursor-pointer"
-                  onClick={() => sortData(column.key)}
-                >
-                  {column.label} <span>{getSortIcon(column.key)}</span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {finalizedPatients.length > 0 ? (
-              finalizedPatients.map((patient) => (
-                <tr key={patient.$id} className="border-b hover:bg-indigo-50">
-                  {[
-                    "RegistrationNumber",
-                    "AppointmentDates",
-                    "PatientName",
-                    "PatientProblem",
-                    "DoctorAttended",
-                    "TreatmentDone",
-                    "PackagePurchased",
-                    "RemainingSessions",
-                    "PaymentReceived",
-                    "Remarks",
-                  ].map((field) => (
-                    <td key={field} className="border border-gray-300 px-6 py-3 text-sm">
-                      {field === "AppointmentDates"
-                        ? patient[field]
-                          ? new Date(patient[field]).toLocaleDateString()
-                          : "N/A"
-                        : patient[field] || "N/A"}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="10" className="text-center py-4 text-sm text-gray-600">
-                  No records found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        </div>
-        )}
       </div>
     </div>
   );
-};
+  }
 
-export default FinalData;
+
+export default AdminDashboard;

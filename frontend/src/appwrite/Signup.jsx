@@ -144,7 +144,7 @@ const Signup = () => {
   };
   
   const handleRedirectToLogin = () => {
-    navigate("/login");
+    navigate("/admin-dashboard");
   };
 
   const handleCopyRegistrationNumber = () => {
@@ -262,12 +262,12 @@ const Signup = () => {
         
 <div className="mt-4 text-center">
   <p className="text-gray-700">
-    Already have an account?{" "}
+    {/* Appointment Page{" "} */}
     <button
       onClick={handleRedirectToLogin}
       className="text-blue-700 font-semibold underline hover:text-blue-900 transition"
     >
-      Login here
+      Appointment Page
     </button>
   </p>
 </div>

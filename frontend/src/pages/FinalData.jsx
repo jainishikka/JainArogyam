@@ -19,6 +19,7 @@ const FinalData = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
+  const [nameSearch, setNameSearch] = useState(""); // New state for name search
   const [patientsPerPage] = useState(10); // number of patients to show per page
 
   const fetchFinalizedPatients = async () => {
@@ -31,23 +32,38 @@ const FinalData = () => {
         const { endOfDay: endTo } = getStartAndEndOfDay(endDate);
         queries.push(Query.between("AppointmentDates", startFrom, endTo));
       }
+
+      // Apply the registration search filter
       if (registrationSearch) {
         queries.push(Query.equal("RegistrationNumber", registrationSearch));
       }
+
       queries.push(Query.orderDesc("AppointmentDates"));
 
+      // Fetch data from Appwrite
       const response = await databases.listDocuments(DATABASE_ID, FINAL_COLLECTION_ID, queries);
-      setFinalizedPatients(response.documents);
+
+      // Apply the patient name search filter after fetching data
+      let filteredPatients = response.documents;
+
+      if (nameSearch) {
+        filteredPatients = filteredPatients.filter(patient =>
+          patient.PatientName.toLowerCase().includes(nameSearch.toLowerCase())
+        );
+      }
+
+      setFinalizedPatients(filteredPatients);
+
     } catch (error) {
       console.error("Error fetching finalized patients:", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  };  
 
   useEffect(() => {
     fetchFinalizedPatients();
-  }, []);
+  }, [nameSearch, registrationSearch, startDate, endDate]);
 
   const getStartAndEndOfDay = (dateString) => {
     const date = new Date(dateString);
@@ -107,6 +123,7 @@ const FinalData = () => {
           patient.PackagePurchased || "", // Package Purchased
           patient.RemainingSessions || "", // Remaining Sessions
           patient.PaymentReceived || "", // Payment Received
+          patient.PaymentMode || "", // Payment Mode
           patient.Remarks || "", // Remarks
         ];
         return row.map((value) => `"${value}"`).join(","); // Wrap each value in quotes to handle commas
@@ -148,8 +165,8 @@ const FinalData = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-500 to-purple-600 p-6">
-      <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-xl p-6">
+    <div className="min-h-screen bg-gradient-to-r from-blue-500 to-purple-600 p-6 overflow-hidden">
+      <div className="max-w-full mx-auto bg-white rounded-lg shadow-xl p-6">
         <h1 className="text-4xl font-bold text-blue-800 text-center mb-8">
           Finalized Patients Data
         </h1>
@@ -171,45 +188,22 @@ const FinalData = () => {
 
         <div className="flex flex-wrap gap-6 mb-8 items-center justify-center">
           <div className="flex flex-col">
-            <label htmlFor="startDate" className="text-sm font-semibold mb-2">
-              Start Date
-            </label>
-            <input
-              type="date"
-              id="startDate"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="border border-gray-300 rounded-lg px-4 py-2"
-            />
+            <label htmlFor="startDate" className="text-sm font-semibold mb-2">Start Date</label>
+            <input type="date" id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border border-gray-300 rounded-lg px-4 py-2" />
           </div>
           <div className="flex flex-col">
-            <label htmlFor="endDate" className="text-sm font-semibold mb-2">
-              End Date
-            </label>
-            <input
-              type="date"
-              id="endDate"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="border border-gray-300 rounded-lg px-4 py-2"
-            />
+            <label htmlFor="endDate" className="text-sm font-semibold mb-2">End Date</label>
+            <input type="date" id="endDate" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border border-gray-300 rounded-lg px-4 py-2" />
           </div>
           <div className="flex flex-col">
-            <label htmlFor="registrationSearch" className="text-sm font-semibold mb-2">
-              Registration Number
-            </label>
-            <input
-              type="text"
-              id="registrationSearch"
-              value={registrationSearch}
-              onChange={(e) => setRegistrationSearch(e.target.value)}
-              className="border border-gray-300 rounded-lg px-4 py-2"
-            />
+            <label htmlFor="registrationSearch" className="text-sm font-semibold mb-2">Registration Number</label>
+            <input type="text" id="registrationSearch" value={registrationSearch} onChange={(e) => setRegistrationSearch(e.target.value)} className="border border-gray-300 rounded-lg px-4 py-2" />
           </div>
-          <button
-            onClick={fetchFinalizedPatients}
-            className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-all"
-          >
+          <div className="flex flex-col">
+            <label htmlFor="nameSearch" className="text-sm font-semibold mb-2">Patient Name</label>
+            <input type="text" id="nameSearch" value={nameSearch} onChange={(e) => setNameSearch(e.target.value)} className="border border-gray-300 rounded-lg px-4 py-2" />
+          </div>
+          <button onClick={fetchFinalizedPatients} className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-all">
             Search
           </button>
         </div>
@@ -228,31 +222,34 @@ const FinalData = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full table-auto border-collapse border border-gray-300 shadow-md">
-              <thead>
-                <tr className="bg-indigo-100 text-gray-700">
-                  {[
-                    { key: "RegistrationNumber", label: "Registration Number" },
-                    { key: "AppointmentDates", label: "Appointment Date" },
-                    { key: "PatientName", label: "Patient Name" },
-                    { key: "PatientProblem", label: "Patient Problem" },
-                    { key: "DoctorAttended", label: "Doctor Attended" },
-                    { key: "TreatmentDone", label: "Treatment Done" },
-                    { key: "PackagePurchased", label: "Package Purchased" },
-                    { key: "RemainingSessions", label: "Remaining Sessions" },
-                    { key: "PaymentReceived", label: "Payment Received" },
-                    { key: "Remarks", label: "Remarks" },
-                  ].map((column) => (
-                    <th
-                      key={column.key}
-                      className="border border-gray-300 px-6 py-3 text-left text-sm font-semibold cursor-pointer"
-                      onClick={() => sortData(column.key)}
-                    >
-                      {column.label} <span>{getSortIcon(column.key)}</span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
+            <thead>
+  <tr className="bg-indigo-100 text-gray-700">
+    {[
+      { key: "RegistrationNumber", label: "Registration Number" },
+      { key: "AppointmentDates", label: "Appointment Date" },
+      { key: "PatientName", label: "Patient Name" },
+      { key: "PatientProblem", label: "Patient Problem" },
+      { key: "DoctorAttended", label: "Doctor Attended" },
+      { key: "TreatmentDone", label: "Treatment Done" },
+      { key: "PackagePurchased", label: "Package Purchased" },
+      { key: "RemainingSessions", label: "Remaining Sessions" },
+      { key: "Payment Received", label: "Payment Received" },
+      { key: "Payment", label: "Payment" },
+      { key: "PaymentMode", label: "Payment Mode" },
+      { key: "Remarks", label: "Remarks" },
+    ].map((column) => (
+      <th
+        key={column.key}
+        className="border border-gray-300 px-6 py-3 text-left text-sm font-semibold cursor-pointer"
+        onClick={() => sortData(column.key)}
+      >
+        {column.label} <span>{getSortIcon(column.key)}</span>
+      </th>
+    ))}
+  </tr>
+</thead>
+
+<tbody>
   {currentPatients.length > 0 ? (
     currentPatients.map((patient) => (
       <tr key={patient.$id} className="border-b hover:bg-indigo-50">
@@ -266,6 +263,8 @@ const FinalData = () => {
           "PackagePurchased",
           "RemainingSessions",
           "PaymentReceived",
+          "Payment",
+          "PaymentMode", // Corrected: Ensure it matches the backend attribute
           "Remarks",
         ].map((field) => (
           <td key={field} className="border border-gray-300 px-6 py-3 text-sm">
@@ -295,6 +294,7 @@ const FinalData = () => {
     </tr>
   )}
 </tbody>
+
    
             </table>
           </div>

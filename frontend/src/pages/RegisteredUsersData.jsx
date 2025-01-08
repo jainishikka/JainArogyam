@@ -25,6 +25,24 @@ const RegisteredUsersData = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
+  const [searchMobile, setSearchMobile] = useState("");
+const [searchName, setSearchName] = useState("");
+
+
+useEffect(() => {
+  const lowerCaseMobile = searchMobile.toLowerCase();
+  const lowerCaseName = searchName.toLowerCase();
+
+  const filtered = users.filter((user) => {
+    const matchesMobile = user.MobileNumber?.toLowerCase().includes(lowerCaseMobile);
+    const matchesName =
+      user.FirstName?.toLowerCase().includes(lowerCaseName) ||
+      user.LastName?.toLowerCase().includes(lowerCaseName);
+    return (!searchMobile || matchesMobile) && (!searchName || matchesName);
+  });
+
+  setFilteredUsers(filtered);
+}, [searchMobile, searchName, users]);
 
   const navigate = useNavigate();
 
@@ -144,7 +162,7 @@ const RegisteredUsersData = () => {
   
  return (
     <div className="min-h-screen bg-gradient-to-br from-green-100 to-blue-500 p-6">
-      <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-xl p-6">
+      <div className="max-w-full mx-auto bg-white rounded-lg shadow-xl p-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">
           Registered Users Data
         </h1>
@@ -202,21 +220,33 @@ const RegisteredUsersData = () => {
           </button>
         </div>
 
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) =>
-            setFilteredUsers(
-              users.filter((user) =>
-                user.MobileNumber?.toLowerCase().includes(
-                  e.target.value.toLowerCase()
-                )
-              )
-            )
-          }
-          className="w-full p-2 border rounded-md mb-4"
-          placeholder="Search by Mobile Number..."
-        />
+        <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+  <input
+    type="text"
+    value={searchMobile}
+    onChange={(e) => setSearchMobile(e.target.value)}
+    className="p-2 border rounded-md"
+    placeholder="Search by Mobile Number..."
+  />
+  <input
+    type="text"
+    value={searchName}
+    onChange={(e) => setSearchName(e.target.value)}
+    className="p-2 border rounded-md"
+    placeholder="Search by Name (First/Last)..."
+  />
+  <button
+    onClick={() => {
+      setSearchMobile("");
+      setSearchName("");
+      setFilteredUsers(users);
+    }}
+    className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+  >
+    Clear Filters
+  </button>
+</div>
+
         
 
         {/* Data Table */}
@@ -246,26 +276,6 @@ const RegisteredUsersData = () => {
                   ))}
                 </tr>
               </thead>
-              {/* <tbody>
-                {filteredUsers.slice(0, itemsPerPage).map((user) => (
-                  <tr key={user.$id} className="border-b">
-                    <td className="px-4 py-2">{user.RegistrationNumber || "N/A"}</td>
-                    <td className="px-4 py-2">{user.FirstName || "N/A"}</td>
-                    <td className="px-4 py-2">{user.LastName || "N/A"}</td>
-                    <td className="px-4 py-2">{user.Gender || "N/A"}</td>
-                    <td className="px-4 py-2">{user.PatientEmail || "N/A"}</td>
-                    <td className="px-4 py-2">
-                      {user.Date_Of_Birth
-                        ? new Date(user.Date_Of_Birth).toLocaleDateString()
-                        : "N/A"}
-                    </td>
-                    <td className="px-4 py-2">{user.MobileNumber || "N/A"}</td>
-                    <td className="px-4 py-2">
-                      {new Date(user.$createdAt).toLocaleString("en-GB")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody> */}
                <tbody>
                 {currentPageData.map((user) => (
                   <tr key={user.$id} className="border-b">
