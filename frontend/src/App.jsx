@@ -52,8 +52,9 @@ const App = () => {
             <Route path="/bookAppointment" element={<BookAppoEntry />} />
             <Route path="/llogin" element={<LLogin />} />
             
+            <Route path="/" element={<LLogin />} />
             {/* Login Route */}
-            <Route path="/" element={<Login asLogin={handleLogin} />} />
+            {/* <Route path="/" element={<Login asLogin={handleLogin} />} /> */}
             <Route path="/login" element={<Login asLogin={handleLogin} />} />
 
             {/* Protected Routes */}

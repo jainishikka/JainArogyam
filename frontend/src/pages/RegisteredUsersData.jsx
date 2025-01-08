@@ -171,7 +171,7 @@ useEffect(() => {
           onClick={() => navigate("/admin-dashboard")}
           className="mb-6 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
         >
-          Appointment Details
+          Live Appointment Diary
         </button>
         <button
           onClick={downloadData}

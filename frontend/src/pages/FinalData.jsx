@@ -168,7 +168,7 @@ const FinalData = () => {
     <div className="min-h-screen bg-gradient-to-r from-blue-500 to-purple-600 p-6 overflow-hidden">
       <div className="max-w-full mx-auto bg-white rounded-lg shadow-xl p-6">
         <h1 className="text-4xl font-bold text-blue-800 text-center mb-8">
-          Finalized Patients Data
+          Historical Data
         </h1>
 
         <div className="flex justify-center gap-6 mb-8">
@@ -176,13 +176,13 @@ const FinalData = () => {
             to="/admin-dashboard"
             className="bg-blue-600 text-white py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 ease-in-out transform hover:scale-105"
           >
-            Appointment Details
+            Live Appointment Diary
           </Link>
           <Link
             to="/registered-users-data"
             className="bg-indigo-600 text-white py-3 px-6 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 ease-in-out transform hover:scale-105"
           >
-            View Registered Users
+             Registered Users
           </Link>
         </div>
 

@@ -32,12 +32,72 @@ const Signup = () => {
     return `${monthStr}/${dayStr}/${yearStr}`;
   };
 
-  const generateRegistrationNumber = () => {
-    const timestamp = Date.now().toString().slice(-6);
-    const randomString = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `REG-${timestamp}-${randomString}`;
-  };
+ 
 
+  // const generateRegistrationNumber = async () => {
+  //   const yearLastTwoDigits = new Date().getFullYear().toString().slice(-2);
+  
+  //   try {
+  //     // Fetch the latest registration number from the database
+  //     const response = await databases.listDocuments(
+  //       envt_imports.appwriteDatabaseId,
+  //       envt_imports.appwriteCollection2Id,
+  //       [Query.orderDesc("RegistrationNumber"), Query.limit(1)]
+  //     );
+  
+  //     const latestRegistrationNumber =
+  //       response.documents.length > 0
+  //         ? response.documents[0].RegistrationNumber
+  //         : null;
+  
+  //     // Extract the count from the latest registration number
+  //     const currentCount = latestRegistrationNumber
+  //       ? parseInt(latestRegistrationNumber.slice(-4), 10)
+  //       : 0;
+  
+  //     // Increment count and pad it to 4 digits
+  //     const paddedCount = String(currentCount + 1).padStart(4, "0");
+  
+  //     // Return the new registration number
+  //     return `JAP${yearLastTwoDigits}${paddedCount}`;
+  //   } catch (error) {
+  //     console.error("Error fetching latest registration number:", error);
+  //     throw new Error("Could not generate a new registration number.");
+  //   }
+  // };
+  
+  const generateRegistrationNumber = async () => {
+    const yearLastTwoDigits = new Date().getFullYear().toString().slice(-2);
+  
+    try {
+      // Fetch the latest registration number from the database
+      const response = await databases.listDocuments(
+        envt_imports.appwriteDatabaseId,
+        envt_imports.appwriteCollection2Id,
+        [Query.orderDesc("RegistrationNumber"), Query.limit(1)]
+      );
+  
+      // If no document exists, set the latest registration number to null
+      const latestRegistrationNumber =
+        response.documents.length > 0 ? response.documents[0].RegistrationNumber : null;
+  
+      // If there's no previous registration number, start from 0, else extract the count
+      const currentCount = latestRegistrationNumber
+        ? parseInt(latestRegistrationNumber.slice(-4), 10) // Extract last 4 digits and parse to integer
+        : 0; // If no previous record, start at 0
+  
+      // Increment the count and pad it to 4 digits
+      const paddedCount = String(currentCount + 1).padStart(4, "0");
+  
+      // Return the new registration number
+      return `JAP${yearLastTwoDigits}${paddedCount}`;
+    } catch (error) {
+      console.error("Error fetching latest registration number:", error);
+      throw new Error("Could not generate a new registration number.");
+    }
+  };
+  
+  
   
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -66,15 +126,12 @@ const Signup = () => {
   
     try {
       const formattedDob = formatDateForStorage(dob);
-      console.log(formattedDob);
       
       const patientName = `${firstName} ${lastName}`.trim();
-      console.log("patientName",patientName);
       
       
       // Create a unique combination string
       const uniqueCombination = `${firstName}|${lastName}|${email || "null"}|${mobile || "null"}`;
-      console.log("uniqueCombination",uniqueCombination);
       
       // Query for existing users by unique combination
       const existingUsersResponse = await databases.listDocuments(
@@ -82,7 +139,6 @@ const Signup = () => {
         envt_imports.appwriteCollection2Id,
         [Query.equal("UniqueCombination", uniqueCombination)]
       );
-      console.log("existingUsersResponse",existingUsersResponse);
       
       const existingUsers = existingUsersResponse?.documents || [];
       console.log("existingUsers",existingUsers);
@@ -98,8 +154,7 @@ const Signup = () => {
       }
   
       // Allow signup for new users
-      const registrationNumber = generateRegistrationNumber();
-      console.log("registration number",registrationNumber);
+      const registrationNumber = await generateRegistrationNumber();
       
       const createdUser = await databases.createDocument(
         envt_imports.appwriteDatabaseId,
@@ -117,8 +172,6 @@ const Signup = () => {
           UniqueCombination: uniqueCombination, 
         }
       );
-  
-      console.log("User created in Appwrite:", createdUser);
   
       localStorage.setItem("role", "user");
       localStorage.setItem("registrationNumber", registrationNumber);
@@ -143,8 +196,9 @@ const Signup = () => {
     }
   };
   
+  
   const handleRedirectToLogin = () => {
-    navigate("/admin-dashboard");
+    navigate("/login");
   };
 
   const handleCopyRegistrationNumber = () => {
@@ -262,19 +316,27 @@ const Signup = () => {
         
 <div className="mt-4 text-center">
   <p className="text-gray-700">
-    {/* Appointment Page{" "} */}
+    Already have an account?{" "}
     <button
       onClick={handleRedirectToLogin}
       className="text-blue-700 font-semibold underline hover:text-blue-900 transition"
     >
-      Appointment Page
+      Login here
     </button>
   </p>
 </div>
+{/* Admin Dashboard Button */}
+<div className="mt-8 text-center">
+      <button
+        onClick={() => navigate("/admin-dashboard")}
+        className="w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white py-2 rounded-md font-bold hover:from-purple-600 hover:to-indigo-600 transition shadow-lg"
+      >
+        Live Appointment Diary
+      </button>
+    </div>
       </div>
     </div>
   );
 };
 
 export default Signup;
-

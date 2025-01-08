@@ -232,7 +232,7 @@ const [searchName, setSearchName] = useState("");
     { label: "Doctor Attended", field: "DoctorAttended" },
     { label: "Treatment Done", field: "TreatmentDone" },
     { label: "Package Purchased", field: "PackagePurchased" },
-    { label: "Current Session", field: "RemainingSessions" },  //ONLY CHANGED REMAINING SESSION TO CURRENT SESSION IN UI AT THIS PLACE ONLY.
+    // { label: "Current Session", field: "RemainingSessions" },  //ONLY CHANGED REMAINING SESSION TO CURRENT SESSION IN UI AT THIS PLACE ONLY.
     { label: "Payment Received", field: "PaymentReceived" },
     { label: "Payment", field: "Payment" }, // New column
     { label: "Payment Mode", field: "PaymentMode" },
@@ -261,14 +261,14 @@ const [searchName, setSearchName] = useState("");
           >
             Historical Data
           </button>
-          <button
+          {/* <button
             onClick={() => navigate("/signup")}
             className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-all"
           >
             New Entry
-          </button>
+          </button> */}
           <button
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/signup")}
             className="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 transition-all"
           >
             Book Appointment
@@ -404,7 +404,7 @@ const [searchName, setSearchName] = useState("");
           className="h-5 w-5"
         />
       </td>
-      <td className="px-6 py-2 border">
+      {/* <td className="px-6 py-2 border">
         <input
           type="number"
           value={patient.RemainingSessions || 0}
@@ -417,7 +417,7 @@ const [searchName, setSearchName] = useState("");
           }
           className="border rounded px-2 py-1 w-full"
         />
-      </td>
+      </td> */}
       <td className="px-6 py-2 border text-center">
         <input
           type="checkbox"
