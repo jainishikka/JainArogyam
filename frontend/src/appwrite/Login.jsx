@@ -116,13 +116,31 @@ const Login = ({ asLogin }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring focus:ring-blue-200 disabled:bg-gray-400 transition"
+            className="w-full text-center py-2 px-4 rounded-lg bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 text-white font-semibold shadow-lg hover:shadow-xl transform transition hover:scale-105 hover:bg-gradient-to-r hover:from-blue-500 hover:via-blue-600 hover:to-blue-700"
           >
             {loading ? "  ging In..." : "Book Appointment"}
           </button>
         </form>
+        <div className="mt-6 flex items-center justify-center">
+  <Link
+    to="/signup"
+    className="w-full text-center py-2 px-4 rounded-lg bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 text-white font-semibold shadow-lg hover:shadow-xl transform transition hover:scale-105 hover:bg-gradient-to-r hover:from-blue-500 hover:via-blue-600 hover:to-blue-700"
+  >
+    Don't have an account? Sign Up
+  </Link>
+</div>
+<div className="mt-4 flex items-center justify-center">
+  <Link
+    to="/admin-dashboard"
+    className="w-full text-center py-2 px-4 rounded-lg bg-gradient-to-r from-green-400 via-green-500 to-green-600 text-white font-semibold shadow-lg hover:shadow-xl transform transition hover:scale-105 hover:bg-gradient-to-r hover:from-green-500 hover:via-green-600 hover:to-green-700"
+  >
+    Live Appointment Diary
+  </Link>
+</div>
 
-        <div className="mt-4 flex items-center justify-between">
+
+
+        {/* <div className="mt-4 flex items-center justify-between"> */}
           {/* <label className="flex items-center text-sm">
             <input
               type="checkbox"
@@ -135,7 +153,7 @@ const Login = ({ asLogin }) => {
           {/* <Link to="/signup" className="text-sm text-blue-500 hover:underline">
             Don't have an account? Sign Up
           </Link> */}
-        </div>
+        {/* </div> */}
 
         {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
       </div>

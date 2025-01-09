@@ -268,7 +268,7 @@ const [searchName, setSearchName] = useState("");
             New Entry
           </button> */}
           <button
-            onClick={() => navigate("/signup")}
+            onClick={() => navigate("/login")}
             className="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 transition-all"
           >
             Book Appointment
