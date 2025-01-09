@@ -1,3 +1,6 @@
+
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./appwrite/Login";
@@ -42,6 +45,7 @@ const App = () => {
     };
 
     return (
+        <div>
         <Routes>
             {/* Public Routes */}
             <Route path="/about-us" element={<AboutUs />} />
@@ -80,6 +84,8 @@ const App = () => {
             {/* Catch-All Redirect */}
             <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
+        <ToastContainer />
+        </div>
     );
 };
 

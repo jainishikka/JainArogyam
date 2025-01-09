@@ -141,7 +141,6 @@ const Signup = () => {
       );
       
       const existingUsers = existingUsersResponse?.documents || [];
-      console.log("existingUsers",existingUsers);
   
       // Check if an exact match exists
       if (existingUsers.length > 0) {

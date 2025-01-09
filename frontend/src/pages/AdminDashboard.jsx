@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { Databases, Client, Query } from "appwrite";
 import envt_imports from "../envt_imports/envt_imports";
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import { useNavigate } from "react-router-dom";
 
@@ -48,6 +50,24 @@ const [searchName, setSearchName] = useState("");
   };
 
   const handleFinalizeRecord = async (patient) => {
+    const requiredFields = [
+      { field: "PatientProblem", label: "Patient Problem" },
+      { field: "DoctorAttended", label: "Doctor Attended" },
+      { field: "TreatmentDone", label: "Treatment Done" },
+      { field: "Payment", label: "Payment" },
+      { field: "PaymentMode", label: "Payment Mode" },
+    ];
+  
+    // Check if any required field is empty
+    const missingFields = requiredFields.filter(
+      ({ field }) => !patient[field] || patient[field].toString().trim() === ""
+    );
+  
+    if (missingFields.length > 0) {
+      const missingFieldNames = missingFields.map((f) => f.label).join(", ");
+      toast.error(`Please fill in the following required fields: ${missingFieldNames}`);
+      return; // Exit the function early if validation fails
+    }
     try {
       const { $id, $databaseId, $collectionId, $createdAt, $updatedAt, AppointmentDate, ...dataToMove } = patient;
 
@@ -73,10 +93,10 @@ const [searchName, setSearchName] = useState("");
 
       await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, $id);
       setPatients((prev) => prev.filter((p) => p.$id !== $id));
-      alert("Record successfully finalized.");
+      toast.success("Record successfully finalized.");
     } catch (error) {
       console.error("Error finalizing record:", error);
-      alert(`Failed to finalize the record. Error: ${error.message}`);
+      toast.error(`Failed to finalize the record. Error: ${error.message}`);
     }
   };
 
@@ -391,6 +411,7 @@ const [searchName, setSearchName] = useState("");
               handleFieldChange(patient.$id, field, e.target.value)
             }
             className="border rounded px-2 py-1 w-full"
+            
           />
         </td>
       ))}
@@ -402,6 +423,7 @@ const [searchName, setSearchName] = useState("");
             handleFieldChange(patient.$id, "PackagePurchased", e.target.checked)
           }
           className="h-5 w-5"
+          
         />
       </td>
       {/* <td className="px-6 py-2 border">
@@ -435,6 +457,7 @@ const [searchName, setSearchName] = useState("");
     onChange={(e) =>
       handleFieldChange(patient.$id, "Payment", parseInt(e.target.value, 10) || 0)
     }
+    
     className="border rounded px-2 py-1 w-full"
   />
 </td>

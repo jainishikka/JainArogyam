@@ -90,7 +90,7 @@ const UserDashboard = ({ registrationNumber }) => {
         <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10 px-4">
             <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-6">
                 <h1 className="text-2xl font-bold text-gray-800 mb-4">Hello, {patientName || "User"}!</h1>
-                <p className="text-gray-600 mb-6">Welcome to your dashboard. Please provide your details below.</p>
+                <p className="text-gray-600 mb-6">Welcome! Please provide your details below.</p>
 
                 {/* Success and Error Messages */}
                 {successMessage && (
@@ -137,7 +137,7 @@ const UserDashboard = ({ registrationNumber }) => {
                             onClick={handleRedirectToLogin}
                             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring focus:ring-blue-300"
                         >
-                            Go to Appointment Page
+                            Go to Live Appointment Diary
                         </button>
                     </div>
                 )}
