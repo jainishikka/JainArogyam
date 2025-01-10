@@ -8,7 +8,7 @@
     "redirects": [
       {
         "source": "/:path*",
-        "destination": "/frontend/index.html",
+        "destination": "/frontend/build/index.html",
         "permanent": false
       }
     ]
