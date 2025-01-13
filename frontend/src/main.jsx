@@ -7,7 +7,7 @@ import Layout from './components/Layout.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-  <BrowserRouter basename='/'>
+  <BrowserRouter>
   <Layout>
     <App />
     </Layout>
