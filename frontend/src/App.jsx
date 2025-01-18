@@ -47,7 +47,7 @@ const App = () => {
 
     return (
         <div>
-            <BrowserRouter>
+            {/* <BrowserRouter> */}
         <Routes>
             {/* Public Routes */}
             <Route path="/about-us" element={<AboutUs />} />
@@ -86,8 +86,8 @@ const App = () => {
             {/* Catch-All Redirect */}
             <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
-        </BrowserRouter>
         <ToastContainer />
+        {/* </BrowserRouter> */}
         </div>
     );
 };
