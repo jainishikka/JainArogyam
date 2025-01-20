@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   root: '.', // Ensures Vite treats the root as the project folder
   build: {
-    outDir: '../dist', // Output folder (relative to the project root)
+    outDir: '../dist',
     emptyOutDir: true, // Clears the output directory before building
   },
   server: {
