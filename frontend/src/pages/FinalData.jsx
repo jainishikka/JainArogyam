@@ -22,45 +22,58 @@ const FinalData = () => {
   const [nameSearch, setNameSearch] = useState(""); // New state for name search
   const [patientsPerPage] = useState(10); // number of patients to show per page
 
+  const addNewRecord = async (newPatientData) => {
+    try {
+      const timestamp = new Date().toISOString(); // Generate unique timestamp
+      await databases.createDocument(DATABASE_ID, FINAL_COLLECTION_ID, {
+        ...newPatientData,
+        AppointmentDates: timestamp, // Assign timestamp
+      });
+      console.log("New record added successfully.");
+    } catch (error) {
+      console.error("Error adding new record:", error);
+    }
+  };
+  
+
+
   const fetchFinalizedPatients = async () => {
     try {
       setIsLoading(true);
-
       const queries = [];
+  
+      // Apply date range filters
       if (startDate && endDate) {
         const { startOfDay: startFrom } = getStartAndEndOfDay(startDate);
         const { endOfDay: endTo } = getStartAndEndOfDay(endDate);
         queries.push(Query.between("AppointmentDates", startFrom, endTo));
       }
-
-      // Apply the registration search filter
+  
+      // Apply registration number filter
       if (registrationSearch) {
         queries.push(Query.equal("RegistrationNumber", registrationSearch));
       }
-
-      queries.push(Query.orderDesc("AppointmentDates"));
-
-      // Fetch data from Appwrite
+  
+      // Fetch documents from Appwrite
       const response = await databases.listDocuments(DATABASE_ID, FINAL_COLLECTION_ID, queries);
-
-      // Apply the patient name search filter after fetching data
-      let filteredPatients = response.documents;
-
-      if (nameSearch) {
-        filteredPatients = filteredPatients.filter(patient =>
-          patient.PatientName.toLowerCase().includes(nameSearch.toLowerCase())
-        );
-      }
-
-      setFinalizedPatients(filteredPatients);
-
+  
+      // Sort records by AppointmentDates in descending order
+      const sortedPatients = response.documents.sort(
+        (a, b) => new Date(b.AppointmentDates) - new Date(a.AppointmentDates)
+      );
+  
+      setFinalizedPatients(sortedPatients);
     } catch (error) {
       console.error("Error fetching finalized patients:", error);
     } finally {
       setIsLoading(false);
     }
-  };  
-
+  };
+  
+  
+  
+  
+  
   useEffect(() => {
     fetchFinalizedPatients();
   }, [nameSearch, registrationSearch, startDate, endDate]);
@@ -104,6 +117,8 @@ const FinalData = () => {
       "Package Purchased",
       "Remaining Sessions",
       "Payment Received",
+      "Payment",
+      "PaymentMode",
       "Remarks",
     ];
 
@@ -123,6 +138,7 @@ const FinalData = () => {
           patient.PackagePurchased || "", // Package Purchased
           patient.RemainingSessions || "", // Remaining Sessions
           patient.PaymentReceived || "", // Payment Received
+          patient.Payment || "",
           patient.PaymentMode || "", // Payment Mode
           patient.Remarks || "", // Remarks
         ];

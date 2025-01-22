@@ -3,8 +3,8 @@ import envt_imports from './envt_imports/envt_imports.js';
 
 const redisClient = createClient({
     socket: {
-        host: envt_imports.redisHost, 
-        port: envt_imports.redisPort, 
+        host: 'localhost', 
+        port: 6379, 
     },
    
 });
@@ -27,7 +27,7 @@ const connectRedis = async () => {
         console.log("Redis client connected.");
     } catch (error) {
         console.error("Error while connecting to Redis:", error.message);
-        process.exit(1);  // Exit if Redis connection fails, can be adjusted based on your needs
+        // process.exit(1);  // Exit if Redis connection fails, can be adjusted based on your needs
     }
 };
 

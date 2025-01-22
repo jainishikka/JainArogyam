@@ -6,6 +6,7 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+
 import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
@@ -40,6 +41,7 @@ const [searchName, setSearchName] = useState("");
         ...queryConditions,
         Query.orderDesc("AppointmentDate"),
       ]);
+      // setPatients((prev) => prev.filter((p) => p.$id !== patient.$id));
       setPatients(response.documents || []);
     } catch (error) {
       console.error("Error fetching active patients:", error);
@@ -54,7 +56,7 @@ const [searchName, setSearchName] = useState("");
       { field: "PatientProblem", label: "Patient Problem" },
       { field: "DoctorAttended", label: "Doctor Attended" },
       { field: "TreatmentDone", label: "Treatment Done" },
-      { field: "Payment", label: "Payment" },
+      // { field: "Payment", label: "Payment" },
       { field: "PaymentMode", label: "Payment Mode" },
     ];
   
@@ -68,30 +70,24 @@ const [searchName, setSearchName] = useState("");
       toast.error(`Please fill in the following required fields: ${missingFieldNames}`);
       return; // Exit the function early if validation fails
     }
+  
     try {
+      // Destructure to remove unnecessary fields before saving
       const { $id, $databaseId, $collectionId, $createdAt, $updatedAt, AppointmentDate, ...dataToMove } = patient;
-
+  
       const dataToInsert = {
         ...dataToMove,
         AppointmentDates: AppointmentDate || null,
+        // FinalizedAt: new Date().toISOString(), // Add a timestamp to differentiate records
       };
-
-      const existingFinalRecord = await databases.listDocuments(DATABASE_ID, FINAL_COLLECTION_ID, [
-        Query.equal("RegistrationNumber", patient.RegistrationNumber),
-      ]);
-
-      if (existingFinalRecord.documents.length > 0) {
-        await databases.updateDocument(
-          DATABASE_ID,
-          FINAL_COLLECTION_ID,
-          existingFinalRecord.documents[0].$id,
-          dataToInsert
-        );
-      } else {
-        await databases.createDocument(DATABASE_ID, FINAL_COLLECTION_ID, "unique()", dataToInsert);
-      }
-
+  
+      // Always create a new record in the FINAL_COLLECTION_ID
+      await databases.createDocument(DATABASE_ID, FINAL_COLLECTION_ID, "unique()", dataToInsert);
+  
+      // Remove the record from the current collection
       await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, $id);
+  
+      // Update UI state
       setPatients((prev) => prev.filter((p) => p.$id !== $id));
       toast.success("Record successfully finalized.");
     } catch (error) {
@@ -99,7 +95,7 @@ const [searchName, setSearchName] = useState("");
       toast.error(`Failed to finalize the record. Error: ${error.message}`);
     }
   };
-
+  
   const handleSearch = async (e) => {
     e.preventDefault();
     try {
@@ -199,6 +195,27 @@ const [searchName, setSearchName] = useState("");
     );
   };
 
+  const addNewRecord = async (newPatientData) => {
+    try {
+      // Add validation checks here for the new patient data if required
+      const { $id, $databaseId, $collectionId, ...dataToInsert } = newPatientData;
+      
+      const response = await databases.createDocument(
+        DATABASE_ID,
+        COLLECTION_ID,
+        "unique()",
+        dataToInsert
+      );
+      toast.success("New record added successfully.");
+      // Optionally, update local state to include the new patient data
+      setPatients((prev) => [...prev, response]);
+    } catch (error) {
+      console.error("Error adding new record:", error);
+      toast.error(`Failed to add new record. Error: ${error.message}`);
+    }
+  };
+  
+
   const handleUpdate = async (id, updatedData) => {
     try {
       const {
@@ -252,7 +269,7 @@ const [searchName, setSearchName] = useState("");
     { label: "Doctor Attended", field: "DoctorAttended" },
     { label: "Treatment Done", field: "TreatmentDone" },
     { label: "Package Purchased", field: "PackagePurchased" },
-    // { label: "Current Session", field: "RemainingSessions" },  //ONLY CHANGED REMAINING SESSION TO CURRENT SESSION IN UI AT THIS PLACE ONLY.
+    { label: "Current Session", field: "RemainingSessions" },  //ONLY CHANGED REMAINING SESSION TO CURRENT SESSION IN UI AT THIS PLACE ONLY.
     { label: "Payment Received", field: "PaymentReceived" },
     { label: "Payment", field: "Payment" }, // New column
     { label: "Payment Mode", field: "PaymentMode" },
@@ -426,7 +443,7 @@ const [searchName, setSearchName] = useState("");
           
         />
       </td>
-      {/* <td className="px-6 py-2 border">
+      <td className="px-6 py-2 border">
         <input
           type="number"
           value={patient.RemainingSessions || 0}
@@ -439,7 +456,7 @@ const [searchName, setSearchName] = useState("");
           }
           className="border rounded px-2 py-1 w-full"
         />
-      </td> */}
+      </td>
       <td className="px-6 py-2 border text-center">
         <input
           type="checkbox"
@@ -451,7 +468,7 @@ const [searchName, setSearchName] = useState("");
         />
       </td>
       <td className="px-6 py-2 border">
-  <input
+  {/* <input
     type="number"
     value={patient.Payment || 0}
     onChange={(e) =>
@@ -459,7 +476,17 @@ const [searchName, setSearchName] = useState("");
     }
     
     className="border rounded px-2 py-1 w-full"
-  />
+  /> */}
+
+<input
+  type="number"
+  value={patient.Payment ?? ""} // Display 0 if Payment is undefined or null
+  onChange={(e) => {
+    const value = e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)); // Handle 0 explicitly as valid input
+    handleFieldChange(patient.$id, "Payment", value);
+  }}
+  className="border rounded px-2 py-1 w-full"
+/>
 </td>
 
 <td className="px-6 py-2 border">
