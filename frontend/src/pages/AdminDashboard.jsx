@@ -49,12 +49,63 @@ const [searchName, setSearchName] = useState("");
     }
   };
 
+  // const handleFinalizeRecord = async (patient) => {
+  //   const requiredFields = [
+  //     { field: "PatientProblem", label: "Patient Problem" },
+  //     { field: "DoctorAttended", label: "Doctor Attended" },
+  //     { field: "TreatmentDone", label: "Treatment Done" },
+  //     { field: "Payment", label: "Payment" },
+  //     { field: "PaymentMode", label: "Payment Mode" },
+  //   ];
+  
+  //   // Check if any required field is empty
+  //   const missingFields = requiredFields.filter(
+  //     ({ field }) => !patient[field] || patient[field].toString().trim() === ""
+  //   );
+  
+  //   if (missingFields.length > 0) {
+  //     const missingFieldNames = missingFields.map((f) => f.label).join(", ");
+  //     toast.error(`Please fill in the following required fields: ${missingFieldNames}`);
+  //     return; // Exit the function early if validation fails
+  //   }
+  //   try {
+  //     const { $id, $databaseId, $collectionId, $createdAt, $updatedAt, AppointmentDate, ...dataToMove } = patient;
+
+  //     const dataToInsert = {
+  //       ...dataToMove,
+  //       AppointmentDates: AppointmentDate || null,
+  //     };
+
+  //     const existingFinalRecord = await databases.listDocuments(DATABASE_ID, FINAL_COLLECTION_ID, [
+  //       Query.equal("RegistrationNumber", patient.RegistrationNumber),
+  //     ]);
+
+  //     if (existingFinalRecord.documents.length > 0) {
+  //       await databases.updateDocument(
+  //         DATABASE_ID,
+  //         FINAL_COLLECTION_ID,
+  //         existingFinalRecord.documents[0].$id,
+  //         dataToInsert
+  //       );
+  //     } else {
+  //       await databases.createDocument(DATABASE_ID, FINAL_COLLECTION_ID, "unique()", dataToInsert);
+  //     }
+
+  //     await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, $id);
+  //     setPatients((prev) => prev.filter((p) => p.$id !== $id));
+  //     toast.success("Record successfully finalized.");
+  //   } catch (error) {
+  //     console.error("Error finalizing record:", error);
+  //     toast.error(`Failed to finalize the record. Error: ${error.message}`);
+  //   }
+  // };
+
   const handleFinalizeRecord = async (patient) => {
     const requiredFields = [
       { field: "PatientProblem", label: "Patient Problem" },
       { field: "DoctorAttended", label: "Doctor Attended" },
       { field: "TreatmentDone", label: "Treatment Done" },
-      { field: "Payment", label: "Payment" },
+      // { field: "Payment", label: "Payment" },
       { field: "PaymentMode", label: "Payment Mode" },
     ];
   
@@ -68,30 +119,24 @@ const [searchName, setSearchName] = useState("");
       toast.error(`Please fill in the following required fields: ${missingFieldNames}`);
       return; // Exit the function early if validation fails
     }
+  
     try {
+      // Destructure to remove unnecessary fields before saving
       const { $id, $databaseId, $collectionId, $createdAt, $updatedAt, AppointmentDate, ...dataToMove } = patient;
-
+  
       const dataToInsert = {
         ...dataToMove,
         AppointmentDates: AppointmentDate || null,
+        // FinalizedAt: new Date().toISOString(), // Add a timestamp to differentiate records
       };
-
-      const existingFinalRecord = await databases.listDocuments(DATABASE_ID, FINAL_COLLECTION_ID, [
-        Query.equal("RegistrationNumber", patient.RegistrationNumber),
-      ]);
-
-      if (existingFinalRecord.documents.length > 0) {
-        await databases.updateDocument(
-          DATABASE_ID,
-          FINAL_COLLECTION_ID,
-          existingFinalRecord.documents[0].$id,
-          dataToInsert
-        );
-      } else {
-        await databases.createDocument(DATABASE_ID, FINAL_COLLECTION_ID, "unique()", dataToInsert);
-      }
-
+  
+      // Always create a new record in the FINAL_COLLECTION_ID
+      await databases.createDocument(DATABASE_ID, FINAL_COLLECTION_ID, "unique()", dataToInsert);
+  
+      // Remove the record from the current collection
       await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, $id);
+  
+      // Update UI state
       setPatients((prev) => prev.filter((p) => p.$id !== $id));
       toast.success("Record successfully finalized.");
     } catch (error) {
@@ -99,7 +144,6 @@ const [searchName, setSearchName] = useState("");
       toast.error(`Failed to finalize the record. Error: ${error.message}`);
     }
   };
-
   const handleSearch = async (e) => {
     e.preventDefault();
     try {
