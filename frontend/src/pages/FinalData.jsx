@@ -20,7 +20,7 @@ const FinalData = () => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
   const [nameSearch, setNameSearch] = useState(""); // New state for name search
-  const [patientsPerPage] = useState(10); // number of patients to show per page
+  const [patientsPerPage] = useState(100); // number of patients to show per page
 
   const fetchFinalizedPatients = async () => {
     try {
