@@ -20,59 +20,95 @@ const FinalData = () => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
   const [nameSearch, setNameSearch] = useState(""); // New state for name search
-  const [patientsPerPage] = useState(100); // number of patients to show per page
+  const [patientsPerPage] = useState(10); // number of patients to show per page
 
-  const addNewRecord = async (newPatientData) => {
-    try {
-      const timestamp = new Date().toISOString(); // Generate unique timestamp
-      await databases.createDocument(DATABASE_ID, FINAL_COLLECTION_ID, {
-        ...newPatientData,
-        AppointmentDates: timestamp, // Assign timestamp
-      });
-      console.log("New record added successfully.");
-    } catch (error) {
-      console.error("Error adding new record:", error);
-    }
-  };
-  
+  // const fetchFinalizedPatients = async () => {
+  //   try {
+  //     setIsLoading(true);
 
+  //     const queries = [];
+  //     if (startDate && endDate) {
+  //       const { startOfDay: startFrom } = getStartAndEndOfDay(startDate);
+  //       const { endOfDay: endTo } = getStartAndEndOfDay(endDate);
+  //       queries.push(Query.between("AppointmentDates", startFrom, endTo));
+  //     }
+
+  //     // Apply the registration search filter
+  //     if (registrationSearch) {
+  //       queries.push(Query.equal("RegistrationNumber", registrationSearch));
+  //     }
+
+  //     queries.push(Query.orderDesc("AppointmentDates"));
+
+  //     // Fetch data from Appwrite
+  //     const response = await databases.listDocuments(DATABASE_ID, FINAL_COLLECTION_ID, queries);
+
+  //     // Apply the patient name search filter after fetching data
+  //     let filteredPatients = response.documents;
+
+  //     if (nameSearch) {
+  //       filteredPatients = filteredPatients.filter(patient =>
+  //         patient.PatientName.toLowerCase().includes(nameSearch.toLowerCase())
+  //       );
+  //     }
+
+  //     setFinalizedPatients(filteredPatients);
+
+  //   } catch (error) {
+  //     console.error("Error fetching finalized patients:", error);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };  
 
   const fetchFinalizedPatients = async () => {
     try {
       setIsLoading(true);
-      const queries = [];
+      let allPatients = [];
+      let queries = [];
+      let offset = 0;
+      const limit = 100; // Fetching in batches
   
-      // Apply date range filters
       if (startDate && endDate) {
         const { startOfDay: startFrom } = getStartAndEndOfDay(startDate);
         const { endOfDay: endTo } = getStartAndEndOfDay(endDate);
         queries.push(Query.between("AppointmentDates", startFrom, endTo));
       }
   
-      // Apply registration number filter
       if (registrationSearch) {
         queries.push(Query.equal("RegistrationNumber", registrationSearch));
       }
   
-      // Fetch documents from Appwrite
-      const response = await databases.listDocuments(DATABASE_ID, FINAL_COLLECTION_ID, queries);
+      queries.push(Query.orderDesc("AppointmentDates"));
   
-      // Sort records by AppointmentDates in descending order
-      const sortedPatients = response.documents.sort(
-        (a, b) => new Date(b.AppointmentDates) - new Date(a.AppointmentDates)
-      );
+      // Fetch all data using pagination
+      let hasMore = true;
+      while (hasMore) {
+        let response = await databases.listDocuments(
+          DATABASE_ID,
+          FINAL_COLLECTION_ID,
+          [...queries, Query.limit(limit), Query.offset(offset)]
+        );
   
-      setFinalizedPatients(sortedPatients);
+        allPatients = [...allPatients, ...response.documents];
+        offset += response.documents.length;
+        hasMore = response.documents.length === limit; // If we got full limit, there may be more
+      }
+  
+      // Apply name search after fetching all data
+      if (nameSearch) {
+        allPatients = allPatients.filter(patient =>
+          patient.PatientName.toLowerCase().includes(nameSearch.toLowerCase())
+        );
+      }
+  
+      setFinalizedPatients(allPatients);
     } catch (error) {
       console.error("Error fetching finalized patients:", error);
     } finally {
       setIsLoading(false);
     }
   };
-  
-  
-  
-  
   
   useEffect(() => {
     fetchFinalizedPatients();
@@ -117,8 +153,8 @@ const FinalData = () => {
       "Package Purchased",
       "Remaining Sessions",
       "Payment Received",
+      "Payment Mode",
       "Payment",
-      "PaymentMode",
       "Remarks",
     ];
 
@@ -138,8 +174,8 @@ const FinalData = () => {
           patient.PackagePurchased || "", // Package Purchased
           patient.RemainingSessions || "", // Remaining Sessions
           patient.PaymentReceived || "", // Payment Received
-          patient.Payment || "",
           patient.PaymentMode || "", // Payment Mode
+          patient.Payment || "",
           patient.Remarks || "", // Remarks
         ];
         return row.map((value) => `"${value}"`).join(","); // Wrap each value in quotes to handle commas
