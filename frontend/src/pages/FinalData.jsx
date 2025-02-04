@@ -67,7 +67,7 @@ const FinalData = () => {
       let allPatients = [];
       let queries = [];
       let offset = 0;
-      const limit = 100; // Fetching in batches
+      const batchSize = 100; // Fetching in batches of 100 (Appwrite's max limit)
   
       if (startDate && endDate) {
         const { startOfDay: startFrom } = getStartAndEndOfDay(startDate);
@@ -81,21 +81,21 @@ const FinalData = () => {
   
       queries.push(Query.orderDesc("AppointmentDates"));
   
-      // Fetch all data using pagination
+      // Recursive fetching to get ALL records
       let hasMore = true;
       while (hasMore) {
-        let response = await databases.listDocuments(
+        const response = await databases.listDocuments(
           DATABASE_ID,
           FINAL_COLLECTION_ID,
-          [...queries, Query.limit(limit), Query.offset(offset)]
+          [...queries, Query.limit(batchSize), Query.offset(offset)]
         );
   
         allPatients = [...allPatients, ...response.documents];
         offset += response.documents.length;
-        hasMore = response.documents.length === limit; // If we got full limit, there may be more
+        hasMore = response.documents.length === batchSize; // If less than batchSize, stop fetching
       }
   
-      // Apply name search after fetching all data
+      // Apply name search AFTER fetching all records
       if (nameSearch) {
         allPatients = allPatients.filter(patient =>
           patient.PatientName.toLowerCase().includes(nameSearch.toLowerCase())
