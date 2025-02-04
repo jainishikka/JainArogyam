@@ -18,42 +18,83 @@ const BookAppoEntry = () => {
   const databases = new Databases(client);
 
   // Handle form submission for booking the appointment
+
+
+  // const handleBookAppointment = async (e) => {
+  //   e.preventDefault(); // prevent default form submit action
+  //   setLoading(true);
+  //   setError(""); // Reset previous errors
+
+  //   try {
+  //     const trimmedRegistrationNumber = registrationNumber.trim();
+
+  //     if (!trimmedRegistrationNumber) {
+  //       setError("Registration Number is required.");
+  //       return;
+  //     }
+
+  //     // Query to find the user with the given registration number
+  //     const response = await databases.listDocuments(
+  //       envt_imports.appwriteDatabaseId,
+  //       envt_imports.appwriteCollection2Id,
+  //       [Query.equal("RegistrationNumber", registrationNumber)]
+  //     );
+
+  //     // If user found, navigate to the booking details page
+  //     if (response.documents.length > 0) {
+  //       navigate("/appointment-details", {
+  //         state: { registrationNumber: trimmedRegistrationNumber },
+  //       });
+  //     } else {
+  //       setError("No user found with this registration number.");
+  //     }
+  //   } catch (err) {
+  //     console.error("Error booking appointment:", err);
+  //     setError("An error occurred while booking the appointment. Please try again.");
+  //   } finally {
+  //     setLoading(false); // stop loading state
+  //   }
+  // };
+
   const handleBookAppointment = async (e) => {
-    e.preventDefault(); // prevent default form submit action
+    e.preventDefault();
     setLoading(true);
-    setError(""); // Reset previous errors
-
+    setError("");
+  
+    const trimmedRegistrationNumber = registrationNumber.trim();
+  
+    if (!trimmedRegistrationNumber) {
+      setError("Registration Number is required.");
+      setLoading(false);
+      return;
+    }
+  
     try {
-      const trimmedRegistrationNumber = registrationNumber.trim();
-
-      if (!trimmedRegistrationNumber) {
-        setError("Registration Number is required.");
-        return;
-      }
-
-      // Query to find the user with the given registration number
-      const response = await databases.listDocuments(
-        envt_imports.appwriteDatabaseId,
-        envt_imports.appwriteCollection2Id,
-        [Query.equal("RegistrationNumber", registrationNumber)]
+      // Create a new appointment entry (DO NOT override)
+      const newAppointment = await databases.createDocument(
+        envt_imports.appwriteDatabaseId,  // Database ID
+        envt_imports.appwriteCollection2Id,  // Collection ID
+        "unique()", // Generates a unique document ID automatically
+        {
+          RegistrationNumber: trimmedRegistrationNumber,
+          createdAt: new Date().toISOString(), // Store timestamp for sorting
+        }
       );
-
-      // If user found, navigate to the booking details page
-      if (response.documents.length > 0) {
-        navigate("/appointment-details", {
-          state: { registrationNumber: trimmedRegistrationNumber },
-        });
-      } else {
-        setError("No user found with this registration number.");
-      }
+  
+      console.log("New appointment created:", newAppointment);
+  
+      navigate("/appointment-details", {
+        state: { registrationNumber: trimmedRegistrationNumber },
+      });
+  
     } catch (err) {
       console.error("Error booking appointment:", err);
       setError("An error occurred while booking the appointment. Please try again.");
     } finally {
-      setLoading(false); // stop loading state
+      setLoading(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-500">
       <div className="w-full max-w-md bg-white rounded-lg shadow-2xl p-8">
@@ -106,5 +147,3 @@ const BookAppoEntry = () => {
 };
 
 export default BookAppoEntry;
-
-
