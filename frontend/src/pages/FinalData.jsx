@@ -22,93 +22,46 @@ const FinalData = () => {
   const [nameSearch, setNameSearch] = useState(""); // New state for name search
   const [patientsPerPage] = useState(10); // number of patients to show per page
 
-  // const fetchFinalizedPatients = async () => {
-  //   try {
-  //     setIsLoading(true);
-
-  //     const queries = [];
-  //     if (startDate && endDate) {
-  //       const { startOfDay: startFrom } = getStartAndEndOfDay(startDate);
-  //       const { endOfDay: endTo } = getStartAndEndOfDay(endDate);
-  //       queries.push(Query.between("AppointmentDates", startFrom, endTo));
-  //     }
-
-  //     // Apply the registration search filter
-  //     if (registrationSearch) {
-  //       queries.push(Query.equal("RegistrationNumber", registrationSearch));
-  //     }
-
-  //     queries.push(Query.orderDesc("AppointmentDates"));
-
-  //     // Fetch data from Appwrite
-  //     const response = await databases.listDocuments(DATABASE_ID, FINAL_COLLECTION_ID, queries);
-
-  //     // Apply the patient name search filter after fetching data
-  //     let filteredPatients = response.documents;
-
-  //     if (nameSearch) {
-  //       filteredPatients = filteredPatients.filter(patient =>
-  //         patient.PatientName.toLowerCase().includes(nameSearch.toLowerCase())
-  //       );
-  //     }
-
-  //     setFinalizedPatients(filteredPatients);
-
-  //   } catch (error) {
-  //     console.error("Error fetching finalized patients:", error);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };  
-
   const fetchFinalizedPatients = async () => {
     try {
       setIsLoading(true);
-      let allPatients = [];
-      let queries = [];
-      let offset = 0;
-      const batchSize = 100; // Fetching in batches of 100 (Appwrite's max limit)
-  
+
+      const queries = [];
       if (startDate && endDate) {
         const { startOfDay: startFrom } = getStartAndEndOfDay(startDate);
         const { endOfDay: endTo } = getStartAndEndOfDay(endDate);
         queries.push(Query.between("AppointmentDates", startFrom, endTo));
       }
-  
+
+      // Apply the registration search filter
       if (registrationSearch) {
         queries.push(Query.equal("RegistrationNumber", registrationSearch));
       }
-  
+
       queries.push(Query.orderDesc("AppointmentDates"));
-  
-      // Recursive fetching to get ALL records
-      let hasMore = true;
-      while (hasMore) {
-        const response = await databases.listDocuments(
-          DATABASE_ID,
-          FINAL_COLLECTION_ID,
-          [...queries, Query.limit(batchSize), Query.offset(offset)]
-        );
-  
-        allPatients = [...allPatients, ...response.documents];
-        offset += response.documents.length;
-        hasMore = response.documents.length === batchSize; // If less than batchSize, stop fetching
-      }
-  
-      // Apply name search AFTER fetching all records
+
+      // Fetch data from Appwrite
+      const response = await databases.listDocuments(DATABASE_ID, FINAL_COLLECTION_ID, queries);
+
+      // Apply the patient name search filter after fetching data
+      let filteredPatients = response.documents;
+
       if (nameSearch) {
-        allPatients = allPatients.filter(patient =>
+        filteredPatients = filteredPatients.filter(patient =>
           patient.PatientName.toLowerCase().includes(nameSearch.toLowerCase())
         );
       }
-  
-      setFinalizedPatients(allPatients);
+
+      setFinalizedPatients(filteredPatients);
+
     } catch (error) {
       console.error("Error fetching finalized patients:", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  };  
+
+
   
   useEffect(() => {
     fetchFinalizedPatients();
