@@ -70,7 +70,6 @@ const FinalData = () => {
     try {
       setIsLoading(true);
   
-      // Build initial query conditions
       let queries = [];
   
       if (startDate && endDate) {
@@ -85,7 +84,7 @@ const FinalData = () => {
   
       queries.push(Query.orderDesc("AppointmentDates"));
   
-      // Recursive fetching to get all data
+      // Fetch all data in batches
       while (hasMore) {
         const response = await databases.listDocuments(
           DATABASE_ID,
@@ -95,23 +94,29 @@ const FinalData = () => {
   
         allPatients = [...allPatients, ...response.documents];
         offset += response.documents.length;
-        hasMore = response.documents.length === limit; // If less than limit, stop fetching
+        hasMore = response.documents.length === limit; // Stop fetching when less than limit
       }
   
-      // Apply search filter AFTER fetching all data
+      // Apply name search AFTER fetching all records
       if (nameSearch) {
         allPatients = allPatients.filter((patient) =>
           patient.PatientName?.toLowerCase().includes(nameSearch.toLowerCase())
         );
       }
   
+      // Set fetched data
       setFinalizedPatients(allPatients);
+  
+      // ✅ Fix: Update total pages dynamically
+      setTotalPages(Math.ceil(allPatients.length / patientsPerPage));
+  
     } catch (error) {
       console.error("Error fetching finalized patients:", error);
     } finally {
       setIsLoading(false);
     }
   };
+  
   
 
   
