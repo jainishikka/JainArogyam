@@ -13,57 +13,87 @@ const FinalData = () => {
   const FINAL_COLLECTION_ID = envt_imports.appwriteFinalDataCollectionId;
 
   const [finalizedPatients, setFinalizedPatients] = useState([]);
+  const [filteredPatients, setFilteredPatients] = useState([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [registrationSearch, setRegistrationSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
-  const [nameSearch, setNameSearch] = useState(""); // New state for name search
-  const [patientsPerPage] = useState(100); // number of patients to show per page
+  const [nameSearch, setNameSearch] = useState(""); 
+  const [itemsPerPage] = useState(10);
+
 
   const fetchFinalizedPatients = async () => {
+    let allPatients = [];
+    let offset = 0;
+    const limit = 100; // Appwrite fetches max 100 records per request
+    let hasMore = true;
+  
     try {
       setIsLoading(true);
-
-      const queries = [];
+      let queries = [];
+  
       if (startDate && endDate) {
         const { startOfDay: startFrom } = getStartAndEndOfDay(startDate);
         const { endOfDay: endTo } = getStartAndEndOfDay(endDate);
         queries.push(Query.between("AppointmentDates", startFrom, endTo));
       }
-
-      // Apply the registration search filter
+  
       if (registrationSearch) {
         queries.push(Query.equal("RegistrationNumber", registrationSearch));
       }
-
-      queries.push(Query.orderDesc("AppointmentDates"));
-
-      // Fetch data from Appwrite
-      const response = await databases.listDocuments(DATABASE_ID, FINAL_COLLECTION_ID, queries);
-
-      // Apply the patient name search filter after fetching data
-      let filteredPatients = response.documents;
-
+  
       if (nameSearch) {
-        filteredPatients = filteredPatients.filter(patient =>
-          patient.PatientName.toLowerCase().includes(nameSearch.toLowerCase())
-        );
+        queries.push(Query.search("PatientName", nameSearch));
       }
-
-      setFinalizedPatients(filteredPatients);
-
+  
+      queries.push(Query.orderDesc("AppointmentDates"));
+  
+      while (hasMore) {
+        const response = await databases.listDocuments(
+          DATABASE_ID,
+          FINAL_COLLECTION_ID,
+          [...queries, Query.limit(limit), Query.offset(offset)]
+        );
+  
+        allPatients = [...allPatients, ...response.documents];
+        offset += response.documents.length;
+        hasMore = response.documents.length === limit;
+      }
+  
+      setFinalizedPatients(allPatients);
+      setFilteredPatients(allPatients); // Avoid re-filtering after fetching
+  
     } catch (error) {
       console.error("Error fetching finalized patients:", error);
     } finally {
       setIsLoading(false);
     }
-  };  
-
+  };
+  
+  
   useEffect(() => {
     fetchFinalizedPatients();
-  }, [nameSearch, registrationSearch, startDate, endDate]);
+  }, []);
+
+  const applyFilters = () => {
+    let filtered = finalizedPatients.filter((patient) => {
+      return (
+        (!startDate || new Date(patient.AppointmentDates) >= new Date(startDate)) &&
+        (!endDate || new Date(patient.AppointmentDates) <= new Date(endDate)) &&
+        (!registrationSearch || patient.RegistrationNumber?.includes(registrationSearch)) &&
+        (!nameSearch || patient.PatientName?.toLowerCase().includes(nameSearch.toLowerCase()))
+      );
+    });
+
+    setFilteredPatients(filtered);
+  };
+
+  useEffect(() => {
+    applyFilters();
+  }, [startDate, endDate, registrationSearch, nameSearch, finalizedPatients]);
+
 
   const getStartAndEndOfDay = (dateString) => {
     const date = new Date(dateString);
@@ -73,11 +103,13 @@ const FinalData = () => {
   };
 
   // For dynamic pagination
-  const totalPages = Math.ceil(finalizedPatients.length / patientsPerPage);
-  const currentPatients = finalizedPatients.slice(
-    (currentPage - 1) * patientsPerPage,
-    currentPage * patientsPerPage
-  );
+  const totalPages = Math.max(1, Math.ceil(filteredPatients.length / itemsPerPage));
+const currentPageData = filteredPatients.slice(
+  (currentPage - 1) * itemsPerPage,
+  currentPage * itemsPerPage
+);
+
+
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -104,31 +136,32 @@ const FinalData = () => {
       "Package Purchased",
       "Remaining Sessions",
       "Payment Received",
+      "Payment Mode",
+      "Payment",
       "Remarks",
     ];
 
     // Map data to ensure it aligns correctly with headers
     const csvContent = [
-      csvHeaders.join(","), // Join headers
-      ...finalizedPatients.map((patient) => {
-        const row = [
-          patient.RegistrationNumber || "", // Registration Number
-          patient.AppointmentDates
-            ? new Date(patient.AppointmentDates).toLocaleDateString() // Appointment Date
-            : "N/A",
-          patient.PatientName || "", // Patient Name
-          patient.PatientProblem || "", // Patient Problem
-          patient.DoctorAttended || "", // Doctor Attended
-          patient.TreatmentDone || "", // Treatment Done
-          patient.PackagePurchased || "", // Package Purchased
-          patient.RemainingSessions || "", // Remaining Sessions
-          patient.PaymentReceived || "", // Payment Received
-          patient.PaymentMode || "", // Payment Mode
-          patient.Remarks || "", // Remarks
-        ];
-        return row.map((value) => `"${value}"`).join(","); // Wrap each value in quotes to handle commas
+      csvHeaders.join(","),
+      ...filteredPatients.map((patient) => { // Fix: Use filteredPatients
+        return [
+          patient.RegistrationNumber || "",
+          patient.AppointmentDates ? new Date(patient.AppointmentDates).toLocaleDateString() : "N/A",
+          patient.PatientName || "",
+          patient.PatientProblem || "",
+          patient.DoctorAttended || "",
+          patient.TreatmentDone || "",
+          patient.PackagePurchased || "",
+          patient.RemainingSessions || "",
+          patient.PaymentReceived || "",
+          patient.PaymentMode || "",
+          patient.Payment || "",
+          patient.Remarks || "",
+        ].map((value) => `"${value}"`).join(",");
       }),
     ].join("\n");
+    
 
     // Create and download the CSV file
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -146,16 +179,18 @@ const FinalData = () => {
       direction = "desc";
     }
     setSortConfig({ key, direction });
-
-    const sortedPatients = [...finalizedPatients].sort((a, b) => {
+  
+    const sortedPatients = [...filteredPatients].sort((a, b) => {
       if (direction === "asc") {
         return a[key] > b[key] ? 1 : -1;
       } else {
         return a[key] < b[key] ? 1 : -1;
       }
     });
-    setFinalizedPatients(sortedPatients);
+  
+    setFilteredPatients(sortedPatients); // Fix: Apply sorting to filteredPatients
   };
+  
 
   const getSortIcon = (key) => {
     if (sortConfig.key === key) {
@@ -164,6 +199,8 @@ const FinalData = () => {
     return "⇅";
   };
 
+
+  
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-500 to-purple-600 p-6 overflow-hidden">
       <div className="max-w-full mx-auto bg-white rounded-lg shadow-xl p-6">
@@ -208,13 +245,20 @@ const FinalData = () => {
           </button>
         </div>
 
+        <div className="flex gap-4 mt-4">
         <button
           onClick={downloadData}
-          className="bg-green-500 text-white px-6 py-2 mb-8 rounded-lg hover:bg-green-600 transition-all"
+          className="bg-green-500 text-white px-6 py-2 rounded-lg shadow-lg hover:bg-green-600 transition-all"
         >
           Download Data
         </button>
 
+        <button className="bg-blue-600 text-white px-6 py-2 rounded-lg shadow-lg hover:bg-blue-700 transition-all">
+  Showing {currentPageData.length} records out of {filteredPatients.length} total
+</button>
+
+
+      </div>
         {isLoading ? (
           <div className="flex justify-center py-6">
             <div className="loader ease-linear rounded-full border-8 border-t-8 border-indigo-300 h-16 w-16"></div>
@@ -250,8 +294,8 @@ const FinalData = () => {
 </thead>
 
 <tbody>
-  {currentPatients.length > 0 ? (
-    currentPatients.map((patient) => (
+  {currentPageData.length > 0 ? (
+    currentPageData.map((patient) => (
       <tr key={patient.$id} className="border-b hover:bg-indigo-50">
         {[
           "RegistrationNumber",
